@@ -2,7 +2,10 @@
 // Adaptive chunking / staged summarization from openclaw: src/agents/compaction.ts:110-129, 244-305
 // Fallback chain from openclaw: src/agents/compaction.ts:176-242
 import { generateText } from "ai";
+import type { LanguageModel } from "ai";
 import { db } from "~/server/clients/db";
+import { resolveModel } from "~/server/clients/nebius";
+import { toGatewayModelId } from "~/server/api/routers/trustclaw/models";
 import type { ReconstructedMessage } from "../types";
 import { estimateMessageTokens } from "../context/token-estimation";
 import {
@@ -32,6 +35,10 @@ interface CompactionResult {
 
 const ADAPTIVE_CHUNK_THRESHOLD = 100_000;
 const LARGE_TOOL_RESULT_THRESHOLD = 10_000;
+
+function resolveCompactionModel(modelId: string): LanguageModel {
+  return resolveModel(modelId) ?? toGatewayModelId(modelId);
+}
 
 export function findCutPoint(
   messages: ReconstructedMessage[],
@@ -69,9 +76,7 @@ async function summarize(
   conversationText: string,
   previousSummary: string | null,
 ): Promise<string> {
-  const modelString = anthropicModel.startsWith("anthropic/")
-    ? anthropicModel
-    : `anthropic/${anthropicModel}`;
+  const model = resolveCompactionModel(anthropicModel);
 
   const safeConversation = sanitizeString(conversationText);
   const safePreviousSummary = previousSummary ? sanitizeString(previousSummary) : null;
@@ -84,7 +89,7 @@ async function summarize(
   }
 
   const result = await generateText({
-    model: modelString,
+    model,
     system: COMPACTION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
     maxOutputTokens: 4_000,
@@ -117,11 +122,8 @@ async function stagedSummarize(
     firstSummary,
   );
 
-  const mergeModelString = anthropicModel.startsWith("anthropic/")
-    ? anthropicModel
-    : `anthropic/${anthropicModel}`;
   const mergeResult = await generateText({
-    model: mergeModelString,
+    model: resolveCompactionModel(anthropicModel),
     system: COMPACTION_SYSTEM_PROMPT,
     messages: [
       {
