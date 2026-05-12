@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.87",
+    "@vitalops/opendesk-sdk": "^0.1.0",
     "@composio/core": "^0.6.3",
     "@composio/vercel": "^0.6.3",
     "@hookform/resolvers": "^5.2.2",
@@ -112,7 +113,8 @@
       "prisma",
       "@prisma/client",
       "sharp",
-      "unrs-resolver"
+      "unrs-resolver",
+      "@nut-tree-fork/nut-js"
     ]
   }
 }

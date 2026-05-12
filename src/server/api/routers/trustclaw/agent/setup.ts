@@ -7,6 +7,7 @@ import {
   createCustomTools,
   searchMemoriesForContext,
 } from "./tools";
+import { createOpendeskTools } from "~/server/clients/opendesk";
 import { getContextWindow } from "./context/context-window";
 import { pruneContext } from "./context/context-pruning";
 import {
@@ -148,10 +149,12 @@ export async function prepareAgentRun(
   const composioTools = await session.tools();
 
   const customTools = createCustomTools(instanceId, userTimezone);
+  const opendeskTools = await createOpendeskTools();
 
   const allTools: ToolSet = sanitizeToolResults({
     ...composioTools,
     ...customTools,
+    ...opendeskTools,
   });
 
   // Pre-create assistant message row so we can update it in onFinish
