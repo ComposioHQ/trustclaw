@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 ## Product overview
 
@@ -16,14 +16,7 @@ When you need to look up documentation for any of these libraries, use the **Con
 
 ## Architecture
 
-This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio functionality is accessed server-side using a global API key. All LLM and embedding calls route through **Vercel AI Gateway** via plain string model IDs (e.g., `'claude-sonnet-4-5-20250929'`). Auth uses `VERCEL_OIDC_TOKEN` on Vercel deployments, or `AI_GATEWAY_API_KEY` for local dev.
-
-## Governance (optional)
-
-TrustClaw supports optional runtime governance via Cerone.
-When `CERONE_API_KEY` is set, every tool call is validated before execution.
-Actions can be approved, flagged (allowed with warning), or rejected (blocked).
-Get a free trial token: `pip install cerone && cerone demo`
+This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio functionality is accessed server-side using a global API key. All LLM and embedding calls route through **Vercel AI Gateway** via plain string model IDs (e.g., `'Codex-sonnet-4-5-20250929'`). Auth uses `VERCEL_OIDC_TOKEN` on Vercel deployments, or `AI_GATEWAY_API_KEY` for local dev.
 
 ### tRPC (Backend)
 
@@ -645,8 +638,8 @@ We rarely need to make custom components since we are maximally using shadcn pri
 
 After completing a feature, check whether any patterns, conventions, or lessons learned during implementation are missing from or inconsistent with:
 
-- **`CLAUDE.md`** -- update if new conventions were established, existing rules are outdated, or important patterns are undocumented
-- **`.claude/skills/implement-feature/SKILL.md`** -- update if the workflow needs new steps, checklists are incomplete, or code snippets are stale
+- **`AGENTS.md`** -- update if new conventions were established, existing rules are outdated, or important patterns are undocumented
+- **`.Codex/skills/implement-feature/SKILL.md`** -- update if the workflow needs new steps, checklists are incomplete, or code snippets are stale
 
 This keeps documentation aligned with the actual codebase as it evolves.
 

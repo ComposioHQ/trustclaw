@@ -25,6 +25,10 @@ import {
 import { stripToolResultEchoes } from "./strip-tool-echoes";
 import { clearStreamingMessage } from "~/server/clients/redis";
 import type { ReconstructedMessage } from "./types";
+import {
+  GovernanceError,
+  validateAction,
+} from "./cerone-governance";
 
 type MessageSource = "web" | "telegram" | "cron";
 
@@ -35,7 +39,7 @@ type MessageSource = "web" | "telegram" | "cron";
  * that produces invalid JSON when the AI SDK serializes the request
  * body for the Anthropic API.
  */
-function sanitizeToolResults(tools: ToolSet): ToolSet {
+function sanitizeToolResults(agentId: string, tools: ToolSet): ToolSet {
   const wrapped: ToolSet = {};
   for (const [name, tool] of Object.entries(tools)) {
     if (tool.execute) {
@@ -43,6 +47,17 @@ function sanitizeToolResults(tools: ToolSet): ToolSet {
       wrapped[name] = {
         ...tool,
         execute: async (...args: Parameters<typeof originalExecute>) => {
+          try {
+            await validateAction(agentId, name, toPlainRecordSafe(args[0]));
+          } catch (error) {
+            if (error instanceof GovernanceError) {
+              throw error;
+            }
+            console.warn(
+              "[cerone] validation failed, allowing tool execution",
+              error,
+            );
+          }
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- tool execute returns unknown/any; deepSanitize preserves the shape
           const result = await originalExecute(...args);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
@@ -149,7 +164,7 @@ export async function prepareAgentRun(
 
   const customTools = createCustomTools(instanceId, userTimezone);
 
-  const allTools: ToolSet = sanitizeToolResults({
+  const allTools: ToolSet = sanitizeToolResults(instanceId, {
     ...composioTools,
     ...customTools,
   });
