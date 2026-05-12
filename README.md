@@ -32,6 +32,15 @@ That's it. The CLI handles the entire flow.
 
 LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or OpenAI API keys required.**
 
+### ⚠️ Heads-up about the Vercel free (Hobby) plan
+
+TrustClaw runs fine on the free Hobby plan, but Vercel applies two limits that affect the agent:
+
+- **Cron jobs can only run once per day**, and even then they fire anywhere within a 60-minute window of the scheduled hour. Any cron expression more frequent than daily (e.g. hourly, every-30-min) **fails at deploy time** on Hobby. The CLI auto-adjusts `vercel.json` to a daily schedule when it detects you're on Hobby.
+- **Functions are capped at 300s (5 min)** — long-running agent turns may time out.
+
+To get **per-minute cron precision** and **up to 800s (~13 min) per function**, upgrade to [Vercel Pro](https://vercel.com/pricing) and re-run the CLI (or manually flip `vercel.json` back to `* * * * *` + bump `maxDuration`).
+
 ---
 
 ## ✨ Why TrustClaw
@@ -103,8 +112,6 @@ The design choices:
 - [Composio SDK](https://composio.dev) for tool integrations
 - [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com)
 - Redis (resumable streams, optional)
-
-**VERCEL FREE PLAN LIMITATIONS**: If you are are using a free plan of vercel, long running agent turns may timeout. Additoinally, the CRON can trigger at most once day, therefore, even if you schedule items to run at specific times during the day, the CRON will only hit once per day. To avoid these concerns, upgrade your Vercel plan.
 
 ---
 
