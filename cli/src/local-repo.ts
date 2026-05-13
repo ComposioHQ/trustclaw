@@ -7,19 +7,51 @@ import { spinner, log, confirm, isCancel, cancel, text } from "@clack/prompts";
 
 const execFile = promisify(_execFile);
 
+// We embed the GitHub token in `https://x-access-token:${token}@github.com/...`
+// URLs to authenticate clones and pushes. When a child_process call fails,
+// Node's error includes the failed command + stdout/stderr, which can echo
+// that URL — leaking the token to interactive terminals and CI logs. Scrub
+// it from any error fields before re-throwing.
+const CREDENTIAL_URL_PATTERN = /(https?:\/\/[^/@\s:]+:)[^@\s]+@/gi;
+
+function redactCredentials(value: string): string {
+  return value.replace(CREDENTIAL_URL_PATTERN, "$1<redacted>@");
+}
+
+function sanitizeChildProcessError(err: unknown): unknown {
+  if (!(err instanceof Error)) return err;
+  err.message = redactCredentials(err.message);
+  const e = err as Error & {
+    stdout?: string | Buffer;
+    stderr?: string | Buffer;
+    cmd?: string;
+  };
+  if (typeof e.stdout === "string") e.stdout = redactCredentials(e.stdout);
+  if (typeof e.stderr === "string") e.stderr = redactCredentials(e.stderr);
+  if (typeof e.cmd === "string") e.cmd = redactCredentials(e.cmd);
+  return err;
+}
+
 // Run `git` with an explicit argv array — no shell, no string interpolation.
 // This prevents shell-metachar injection through values like a branch name
 // (e.g. `main;rm -rf ~`) that the previous `exec(\`git ... ${branch}\`)` form
 // would have parsed and executed.
+//
+// On failure, any embedded credentials in error message/stdout/stderr are
+// scrubbed before the error propagates.
 async function runGit(
   args: string[],
   opts: { cwd?: string } = {},
 ): Promise<{ stdout: string; stderr: string }> {
-  const result = await execFile("git", args, opts);
-  return {
-    stdout: result.stdout.toString(),
-    stderr: result.stderr.toString(),
-  };
+  try {
+    const result = await execFile("git", args, opts);
+    return {
+      stdout: result.stdout.toString(),
+      stderr: result.stderr.toString(),
+    };
+  } catch (err) {
+    throw sanitizeChildProcessError(err);
+  }
 }
 
 export interface LocalRepoInfo {
