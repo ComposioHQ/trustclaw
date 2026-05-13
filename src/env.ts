@@ -1,6 +1,16 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+const booleanEnv = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+
+  return value;
+}, z.boolean().default(true));
+
 export const env = createEnv({
   server: {
     NODE_ENV: z
@@ -9,6 +19,8 @@ export const env = createEnv({
 
     // Better Auth
     BETTER_AUTH_SECRET: z.string(),
+    ALLOW_OPEN_SIGNUP: booleanEnv,
+    ADMIN_USER_EMAIL: z.string().email().optional(),
 
     // Composio API (global key)
     COMPOSIO_API_KEY: z.string(),
@@ -36,6 +48,8 @@ export const env = createEnv({
     // Server
     NODE_ENV: process.env.NODE_ENV,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    ALLOW_OPEN_SIGNUP: process.env.ALLOW_OPEN_SIGNUP,
+    ADMIN_USER_EMAIL: process.env.ADMIN_USER_EMAIL,
     COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,

@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { env } from "~/env";
 import { auth } from "~/server/auth";
 
 // Context creation
@@ -54,8 +55,28 @@ const authMiddleware = t.middleware(async ({ next, ctx }) => {
   });
 });
 
+const adminMiddleware = t.middleware(async ({ next, ctx }) => {
+  if (!ctx.session) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  if (!env.ADMIN_USER_EMAIL || ctx.session.user.email !== env.ADMIN_USER_EMAIL) {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      session: ctx.session,
+    },
+  });
+});
+
 /** Public procedure - session may be null. Use for unauthenticated endpoints. */
 export const publicProcedure = t.procedure;
 
 /** Protected procedure - session guaranteed. Throws UNAUTHORIZED if no session. */
 export const protectedProcedure = t.procedure.use(authMiddleware);
+
+/** Admin procedure - session belongs to ADMIN_USER_EMAIL. */
+export const adminProcedure = t.procedure.use(adminMiddleware);

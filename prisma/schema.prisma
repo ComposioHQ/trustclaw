@@ -95,6 +95,19 @@ model Verification {
   @@map("verification")
 }
 
+model InviteCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  createdAt  DateTime  @default(now())
+  createdBy  String
+  expiresAt  DateTime?
+  usedAt     DateTime?
+  usedByUser String?   @unique
+  note       String?
+
+  @@map("invite_code")
+}
+
 model ComposioClawInstance {
   id     String @id @default(cuid())
   userId String @unique
