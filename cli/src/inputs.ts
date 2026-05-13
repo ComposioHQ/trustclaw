@@ -7,6 +7,7 @@ import {
   select,
   password,
 } from "@clack/prompts";
+import { resolveOpenRouterApiKey } from "./openrouter-auth.js";
 
 function ensure<T>(value: T | symbol): T {
   if (isCancel(value)) {
@@ -103,7 +104,37 @@ async function askLlmProvider(
     return { llmProvider, openrouterApiKey: null };
   }
 
-  const openrouterApiKey = ensure(
+  const openrouterApiKey = await resolveOpenRouterKey();
+  return { llmProvider, openrouterApiKey };
+}
+
+/**
+ * Acquire an OpenRouter API key. Defaults to the browser PKCE flow which
+ * mints a scoped key without copy-paste; the user can opt for manual paste
+ * (useful on headless boxes / SSH) or if the PKCE flow fails (no browser
+ * available, network blocked, etc.) we fall back automatically.
+ */
+async function resolveOpenRouterKey(): Promise<string> {
+  const useBrowser = ensure(
+    await confirm({
+      message:
+        "Log in via browser to mint a scoped OpenRouter key? (No to paste manually)",
+      initialValue: true,
+    }),
+  );
+
+  if (useBrowser) {
+    try {
+      return await resolveOpenRouterApiKey();
+    } catch (err) {
+      log.warn(
+        `Browser login failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      log.info("Falling back to manual key entry.");
+    }
+  }
+
+  return ensure(
     await password({
       message: "Paste your OpenRouter API key (https://openrouter.ai/keys)",
       validate: (v) =>
@@ -112,5 +143,4 @@ async function askLlmProvider(
           : "OpenRouter keys start with sk-or-",
     }),
   );
-  return { llmProvider, openrouterApiKey };
 }

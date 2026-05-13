@@ -47,7 +47,7 @@ TrustClaw can route all LLM and embedding traffic through either provider, picke
 How to pick at deploy time:
 
 - **Deploy-to-Vercel button**: the import form lists `LLM_PROVIDER` and `OPENROUTER_API_KEY` as optional fields. Leave them blank for the Gateway default, or set `LLM_PROVIDER=openrouter` + paste your key for OpenRouter.
-- **`npx @composio/trustclaw deploy`**: the CLI asks which provider you want and prompts for the OpenRouter key if needed. Re-running the CLI skips this prompt when the key is already on the project.
+- **`npx @composio/trustclaw deploy`**: the CLI asks which provider you want. For OpenRouter it opens a browser to OpenRouter's auth page (PKCE), and once you approve, the CLI mints a scoped API key and writes it to Vercel — no copy-paste needed. Manual paste is offered as a fallback for headless / SSH sessions. Re-running the CLI skips the prompt when the key is already on the project.
 - **Manual / dashboard**: add the two vars to the Vercel project env (or your local `.env`); the app picks the new provider on next boot.
 
 To switch a running deployment, update `LLM_PROVIDER` in the Vercel project env and redeploy. Embeddings stay compatible because both providers proxy the same OpenAI model.
