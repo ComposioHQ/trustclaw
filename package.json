@@ -22,7 +22,7 @@
     "vercel"
   ],
   "scripts": {
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && prisma db push && next build",
     "build:local": "NODE_ENV=production next build",
     "check": "next lint && tsc --noEmit",
     "dev": "next dev --turbo",
