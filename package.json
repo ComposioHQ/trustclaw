@@ -41,6 +41,7 @@
     "@composio/core": "^0.6.3",
     "@composio/vercel": "^0.6.3",
     "@hookform/resolvers": "^5.2.2",
+    "@openrouter/ai-sdk-provider": "^2.9.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@radix-ui/react-dialog": "^1.1.15",

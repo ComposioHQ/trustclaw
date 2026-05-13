@@ -1,5 +1,6 @@
 import { generateText, stepCountIs } from "ai";
 import { db } from "~/server/clients/db";
+import { getLanguageModel } from "~/server/clients/ai";
 import { createCustomTools } from "../tools";
 import { serializeMessages } from "./prompts";
 import type { ReconstructedMessage } from "../types";
@@ -50,10 +51,6 @@ export async function runMemoryFlush(
       return { memoriesSaved: 0 };
     }
 
-    const modelString = anthropicModel.startsWith("anthropic/")
-      ? anthropicModel
-      : `anthropic/${anthropicModel}`;
-
     const allCustomTools = createCustomTools(instanceId);
     const memoryTools = {
       memory_save: allCustomTools.memory_save,
@@ -64,7 +61,7 @@ export async function runMemoryFlush(
     const flushPrompt = `Here is the recent conversation context:\n\n${contextSummary}\n\n${FLUSH_USER_PROMPT}`;
 
     const result = await generateText({
-      model: modelString,
+      model: getLanguageModel(anthropicModel),
       system: FLUSH_SYSTEM_PROMPT,
       messages: [{ role: "user" as const, content: flushPrompt }],
       tools: memoryTools,

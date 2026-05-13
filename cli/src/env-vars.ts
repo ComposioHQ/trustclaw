@@ -1,5 +1,6 @@
 import { spinner } from "@clack/prompts";
 import crypto from "crypto";
+import type { LlmProvider } from "./inputs.js";
 
 interface SetEnvArgs {
   token: string;
@@ -11,6 +12,13 @@ interface SetEnvArgs {
   hasBetterAuthSecret: boolean;
   // true when CRON_SECRET is already on the project - skip generating a new one.
   hasCronSecret: boolean;
+  // Which LLM provider this deployment should route through. "vercel-ai-gateway"
+  // is the default and requires no extra env; "openrouter" requires
+  // openrouterApiKey unless one is already on the project.
+  llmProvider: LlmProvider;
+  // null when the project already has OPENROUTER_API_KEY set, or when
+  // llmProvider is "vercel-ai-gateway".
+  openrouterApiKey: string | null;
 }
 
 interface EnvVarSpec {
@@ -50,6 +58,27 @@ export async function setEnvVars(args: SetEnvArgs): Promise<void> {
     });
   }
 
+  // LLM provider selection. We always write LLM_PROVIDER when openrouter is
+  // chosen so the running app picks the right factory; we skip it for the
+  // default to keep the project env clean (the app falls back to
+  // vercel-ai-gateway when unset).
+  if (args.llmProvider === "openrouter") {
+    vars.push({
+      key: "LLM_PROVIDER",
+      value: "openrouter",
+      target: ["production", "preview", "development"],
+      type: "plain",
+    });
+    if (args.openrouterApiKey !== null) {
+      vars.push({
+        key: "OPENROUTER_API_KEY",
+        value: args.openrouterApiKey,
+        target: ["production", "preview", "development"],
+        type: "encrypted",
+      });
+    }
+  }
+
   if (vars.length === 0) return;
 
   const s = spinner();
@@ -62,7 +91,10 @@ export async function setEnvVars(args: SetEnvArgs): Promise<void> {
 
     const res = await fetch(url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${args.token}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${args.token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(spec),
     });
 

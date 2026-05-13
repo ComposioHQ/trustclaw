@@ -3,10 +3,7 @@ import type { ToolSet, SystemModelMessage } from "ai";
 import { db } from "~/server/clients/db";
 import { createComposioClient } from "~/server/clients/composio";
 import { buildSystemPrompt } from "./system-prompt";
-import {
-  createCustomTools,
-  searchMemoriesForContext,
-} from "./tools";
+import { createCustomTools, searchMemoriesForContext } from "./tools";
 import { getContextWindow } from "./context/context-window";
 import { pruneContext } from "./context/context-pruning";
 import {
@@ -24,6 +21,7 @@ import {
 } from "./context/token-estimation";
 import { stripToolResultEchoes } from "./strip-tool-echoes";
 import { clearStreamingMessage } from "~/server/clients/redis";
+import { getLanguageModel } from "~/server/clients/ai";
 import type { ReconstructedMessage } from "./types";
 
 type MessageSource = "web" | "telegram" | "cron";
@@ -90,7 +88,10 @@ export async function prepareAgentRun(
 
   const userTimezone = user?.timezone ?? "UTC";
 
-  const relevantMemories = await searchMemoriesForContext(instanceId, userMessage);
+  const relevantMemories = await searchMemoriesForContext(
+    instanceId,
+    userMessage,
+  );
 
   const systemPrompt = sanitizeString(
     buildSystemPrompt({
@@ -168,13 +169,8 @@ export async function prepareAgentRun(
     },
   });
 
-  const modelString = instance.anthropicModel.startsWith("anthropic/")
-    ? instance.anthropicModel
-    : `anthropic/${instance.anthropicModel}`;
-  const model = modelString;
-
   const agent = new ToolLoopAgent({
-    model,
+    model: getLanguageModel(instance.anthropicModel),
     instructions: {
       role: "system",
       content: systemPrompt,

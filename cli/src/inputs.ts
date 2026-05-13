@@ -1,4 +1,12 @@
-import { text, confirm, isCancel, cancel, log } from "@clack/prompts";
+import {
+  text,
+  confirm,
+  isCancel,
+  cancel,
+  log,
+  select,
+  password,
+} from "@clack/prompts";
 
 function ensure<T>(value: T | symbol): T {
   if (isCancel(value)) {
@@ -21,30 +29,88 @@ export async function askProjectName(defaultName?: string): Promise<string> {
   );
 }
 
+export type LlmProvider = "vercel-ai-gateway" | "openrouter";
+
 interface RemainingInputsArgs {
   existingEnvKeys: Set<string>;
 }
 
+export interface RemainingInputs {
+  enableRedis: boolean;
+  llmProvider: LlmProvider;
+  // null when the project already has OPENROUTER_API_KEY set (reusing) or
+  // when the user chose the Vercel AI Gateway path (no key needed).
+  openrouterApiKey: string | null;
+}
+
 /**
- * The only remaining "remaining input" is whether to add Redis. Composio is
- * resolved automatically from the local Composio CLI; stores are provisioned
- * via `vercel integration add` without user prompts.
+ * Prompts for the inputs we can't infer automatically: Redis on/off and which
+ * LLM provider to route through. Composio is resolved separately from the
+ * local Composio CLI; stores are provisioned via `vercel integration add`.
  */
 export async function gatherRemainingInputs(
   args: RemainingInputsArgs,
-): Promise<{ enableRedis: boolean }> {
-  if (
-    args.existingEnvKeys.has("REDIS_URL") ||
-    args.existingEnvKeys.has("KV_URL")
-  ) {
+): Promise<RemainingInputs> {
+  const enableRedis = await askEnableRedis(args.existingEnvKeys);
+  const { llmProvider, openrouterApiKey } = await askLlmProvider(
+    args.existingEnvKeys,
+  );
+  return { enableRedis, llmProvider, openrouterApiKey };
+}
+
+async function askEnableRedis(existingEnvKeys: Set<string>): Promise<boolean> {
+  if (existingEnvKeys.has("REDIS_URL") || existingEnvKeys.has("KV_URL")) {
     log.info("Redis already connected to the project - reusing.");
-    return { enableRedis: true };
+    return true;
   }
-  const enableRedis = ensure(
+  return ensure(
     await confirm({
       message: "Add Upstash Redis for resumable streams? (recommended)",
       initialValue: true,
     }),
   );
-  return { enableRedis };
+}
+
+async function askLlmProvider(
+  existingEnvKeys: Set<string>,
+): Promise<{ llmProvider: LlmProvider; openrouterApiKey: string | null }> {
+  // Reuse if already configured. We can't read the existing LLM_PROVIDER value
+  // without an extra round-trip, so the presence of OPENROUTER_API_KEY is the
+  // signal that the user already opted into OpenRouter on a prior run.
+  if (existingEnvKeys.has("OPENROUTER_API_KEY")) {
+    log.info("OpenRouter already configured on this project - reusing.");
+    return { llmProvider: "openrouter", openrouterApiKey: null };
+  }
+
+  const llmProvider = ensure(
+    await select<LlmProvider>({
+      message: "Which LLM provider should this deployment use?",
+      options: [
+        {
+          value: "vercel-ai-gateway",
+          label: "Vercel AI Gateway (default, OIDC auth)",
+        },
+        {
+          value: "openrouter",
+          label: "OpenRouter (use your own OPENROUTER_API_KEY)",
+        },
+      ],
+      initialValue: "vercel-ai-gateway",
+    }),
+  );
+
+  if (llmProvider !== "openrouter") {
+    return { llmProvider, openrouterApiKey: null };
+  }
+
+  const openrouterApiKey = ensure(
+    await password({
+      message: "Paste your OpenRouter API key (https://openrouter.ai/keys)",
+      validate: (v) =>
+        v && v.startsWith("sk-or-")
+          ? undefined
+          : "OpenRouter keys start with sk-or-",
+    }),
+  );
+  return { llmProvider, openrouterApiKey };
 }

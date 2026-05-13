@@ -9,16 +9,13 @@ A 24/7 personal AI assistant with 1000+ tools via **OAuth** and **sandboxed exec
 [Demo Video](https://x.com/sarahfim/status/2022518658048888916)
 [Open Source Launch Video](https://x.com/sarahfim/status/2053989393036145121)
 
-
 ---
 
 ## ⚡ Deploy your own in seconds
 
-
 Click here to use the Vercel Template:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
-
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET,LLM_PROVIDER,OPENROUTER_API_KEY&envDescription=Required%3A%20generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%20%60openssl%20rand%20-base64%2032%60.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper.%20Optional%3A%20leave%20LLM_PROVIDER%20and%20OPENROUTER_API_KEY%20blank%20to%20use%20Vercel%20AI%20Gateway%2C%20or%20set%20LLM_PROVIDER%3Dopenrouter%20%2B%20paste%20your%20OPENROUTER_API_KEY%20to%20route%20LLM%20%26%20embedding%20calls%20through%20OpenRouter.&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23-choosing-an-llm-provider&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
 
 ### Or use the CLI
 
@@ -34,18 +31,37 @@ That's it. The CLI handles the entire flow.
 - A [GitHub account](https://github.com) (`gh auth login` once)
 - A free [Composio API key](https://dashboard.composio.dev/login?next=%2F~%2Fproject%2Fsettings%2Fapi-keys&flow=developer) (install the cli `curl -fsSL https://composio.dev/install | bash`)
 
-LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or OpenAI API keys required.**
+LLM and embedding calls route through Vercel AI Gateway by default - **no Anthropic or OpenAI API keys required.** You can also swap to OpenRouter at deploy time - see [Choosing an LLM provider](#-choosing-an-llm-provider).
+
+---
+
+## 🔀 Choosing an LLM provider
+
+TrustClaw can route all LLM and embedding traffic through either provider, picked at runtime via env vars. Both serve the same Claude 4.x models and the same `openai/text-embedding-3-large` embedding model at 1024 dims, so existing pgvector memories remain valid after switching - no re-embedding needed.
+
+| Provider                          | When to use                                                                                                                                                    | Required env                                                                        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Vercel AI Gateway** _(default)_ | You're on Vercel and want zero-config auth via `VERCEL_OIDC_TOKEN`, or you have AI Gateway credits                                                             | _(none)_ - `AI_GATEWAY_API_KEY` only needed for local dev outside `vercel env pull` |
+| **OpenRouter**                    | You want a single key that bills your own [OpenRouter account](https://openrouter.ai), unified usage across 300+ models, or you're self-hosting outside Vercel | `LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY=sk-or-...`                           |
+
+How to pick at deploy time:
+
+- **Deploy-to-Vercel button**: the import form lists `LLM_PROVIDER` and `OPENROUTER_API_KEY` as optional fields. Leave them blank for the Gateway default, or set `LLM_PROVIDER=openrouter` + paste your key for OpenRouter.
+- **`npx @composio/trustclaw deploy`**: the CLI asks which provider you want and prompts for the OpenRouter key if needed. Re-running the CLI skips this prompt when the key is already on the project.
+- **Manual / dashboard**: add the two vars to the Vercel project env (or your local `.env`); the app picks the new provider on next boot.
+
+To switch a running deployment, update `LLM_PROVIDER` in the Vercel project env and redeploy. Embeddings stay compatible because both providers proxy the same OpenAI model.
 
 ---
 
 ## ✨ Why TrustClaw
 
-| | |
-|---|---|
-| 🔐 **OAuth Only** | Connects through OAuth. No passwords stored or shared. |
-| ⚡ **Zero Setup** | Sign up, chat, done. No API keys or config files. |
-| 💤 **Works While You Sleep** | Schedule tasks and let your agent handle them on autopilot. |
-| ☁️ **Sandboxed Execution** | Every action runs in an isolated cloud environment that's gone when the task is done. |
+|                              |                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| 🔐 **OAuth Only**            | Connects through OAuth. No passwords stored or shared.                                |
+| ⚡ **Zero Setup**            | Sign up, chat, done. No API keys or config files.                                     |
+| 💤 **Works While You Sleep** | Schedule tasks and let your agent handle them on autopilot.                           |
+| ☁️ **Sandboxed Execution**   | Every action runs in an isolated cloud environment that's gone when the task is done. |
 
 ### What it can do
 
@@ -62,15 +78,15 @@ LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or Open
 
 TrustClaw is a deliberate response to the security problems with running AI agents locally:
 
-| | TrustClaw | Vanilla local agents |
-|---|---|---|
-| **Setup** | Seconds | Hours of config |
-| **Credentials** | Encrypted, managed by Composio | Plaintext in local config |
-| **Code Execution** | Remote sandbox | On your local machine |
-| **Integrations** | OAuth, 1000+ apps | Manual API key setup per app |
-| **Skill Security** | Managed tool surface | Unvetted public registry |
-| **Audit Trails** | Full action log | None |
-| **Revocation** | One click | Find and delete config files |
+|                    | TrustClaw                      | Vanilla local agents         |
+| ------------------ | ------------------------------ | ---------------------------- |
+| **Setup**          | Seconds                        | Hours of config              |
+| **Credentials**    | Encrypted, managed by Composio | Plaintext in local config    |
+| **Code Execution** | Remote sandbox                 | On your local machine        |
+| **Integrations**   | OAuth, 1000+ apps              | Manual API key setup per app |
+| **Skill Security** | Managed tool surface           | Unvetted public registry     |
+| **Audit Trails**   | Full action log                | None                         |
+| **Revocation**     | One click                      | Find and delete config files |
 
 The design choices:
 
@@ -92,8 +108,8 @@ The design choices:
                     │            │                              │
                     │   ┌────────┼─────────┬──────────┐        │
                     │   ▼        ▼         ▼          ▼        │
-                    │ Postgres  Redis  AI Gateway  Composio    │
-                    │ (pgvector)      (LLM + emb.)             │
+                    │ Postgres  Redis  LLM Provider  Composio  │
+                    │ (pgvector)      (Gateway or OR)          │
                     └──────────────────────────────────────────┘
 ```
 
@@ -103,7 +119,7 @@ The design choices:
 - [tRPC](https://trpc.io) for all backend logic
 - [Better Auth](https://www.better-auth.com/) (username/password)
 - [Prisma](https://prisma.io) + Postgres + [pgvector](https://github.com/pgvector/pgvector)
-- [Vercel AI SDK](https://sdk.vercel.ai) + AI Gateway (LLM + embeddings)
+- [Vercel AI SDK](https://sdk.vercel.ai) routed through either [Vercel AI Gateway](https://vercel.com/ai-gateway) or [OpenRouter](https://openrouter.ai) (LLM + embeddings)
 - [Composio SDK](https://composio.dev) for tool integrations
 - [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com)
 - Redis (resumable streams, optional)
@@ -148,16 +164,19 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 
 ### Required env vars
 
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | Postgres + pgvector connection string |
-| `BETTER_AUTH_SECRET` | Session signing key (32+ random bytes) |
-| `COMPOSIO_API_KEY` | Composio tool integrations |
-| `CRON_SECRET` | Auth for `/api/cron/*` routes (auto-injected on Vercel) |
-| `REDIS_URL` _(optional)_ | Resumable streams + abort flags |
-| `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |
-| `TELEGRAM_BOT_USERNAME` _(optional)_ | Telegram bot |
-| `TELEGRAM_WEBHOOK_SECRET` _(optional)_ | Telegram webhook auth |
+| Variable                               | Purpose                                                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                         | Postgres + pgvector connection string                                                                      |
+| `BETTER_AUTH_SECRET`                   | Session signing key (32+ random bytes)                                                                     |
+| `COMPOSIO_API_KEY`                     | Composio tool integrations                                                                                 |
+| `CRON_SECRET`                          | Auth for `/api/cron/*` routes (auto-injected on Vercel)                                                    |
+| `LLM_PROVIDER` _(optional)_            | `vercel-ai-gateway` (default) or `openrouter` - see [Choosing an LLM provider](#-choosing-an-llm-provider) |
+| `OPENROUTER_API_KEY` _(optional)_      | Required when `LLM_PROVIDER=openrouter`                                                                    |
+| `AI_GATEWAY_API_KEY` _(optional)_      | Local-dev fallback when `LLM_PROVIDER=vercel-ai-gateway` and `VERCEL_OIDC_TOKEN` isn't set                 |
+| `REDIS_URL` _(optional)_               | Resumable streams + abort flags                                                                            |
+| `TELEGRAM_BOT_TOKEN` _(optional)_      | Telegram bot                                                                                               |
+| `TELEGRAM_BOT_USERNAME` _(optional)_   | Telegram bot                                                                                               |
+| `TELEGRAM_WEBHOOK_SECRET` _(optional)_ | Telegram webhook auth                                                                                      |
 
 See [`.env.example`](./.env.example) for the full template.
 
