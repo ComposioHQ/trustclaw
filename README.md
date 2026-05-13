@@ -52,6 +52,16 @@ How to pick at deploy time:
 
 To switch a running deployment, update `LLM_PROVIDER` in the Vercel project env and redeploy. Embeddings stay compatible because both providers proxy the same OpenAI model.
 
+### Rotating or overriding the OpenRouter API key later
+
+Three ways to replace `OPENROUTER_API_KEY` after the initial deploy:
+
+- **`npx @composio/trustclaw set-openrouter-key`** — focused subcommand that asks for a new key (browser PKCE or manual paste), writes it to the Vercel project, and skips everything else (no store provisioning, no Composio prompt). Best for quick rotations.
+- **Re-run `npx @composio/trustclaw deploy`** — the deploy flow now asks "keep / rotate via browser / paste new" when a key is already on the project. Use this if you also want to refresh other settings in the same pass.
+- **Vercel dashboard** — Project Settings → Environment Variables → edit `OPENROUTER_API_KEY` and redeploy. Useful if you generated the key elsewhere (e.g. a Terraform secret) and want to inject it without running the CLI.
+
+After updating, redeploy (Vercel auto-redeploys on the next push, or run `vercel --prod`). Existing in-flight requests on the old key keep working until the function instances recycle.
+
 ---
 
 ## ✨ Why TrustClaw

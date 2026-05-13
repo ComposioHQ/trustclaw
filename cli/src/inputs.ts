@@ -75,13 +75,12 @@ async function askEnableRedis(existingEnvKeys: Set<string>): Promise<boolean> {
 async function askLlmProvider(
   existingEnvKeys: Set<string>,
 ): Promise<{ llmProvider: LlmProvider; openrouterApiKey: string | null }> {
-  // Reuse if already configured. We can't read the existing LLM_PROVIDER value
-  // without an extra round-trip, so the presence of OPENROUTER_API_KEY is the
-  // signal that the user already opted into OpenRouter on a prior run.
-  if (existingEnvKeys.has("OPENROUTER_API_KEY")) {
-    log.info("OpenRouter already configured on this project - reusing.");
-    return { llmProvider: "openrouter", openrouterApiKey: null };
-  }
+  // If OpenRouter is already configured, default to keeping it but let the
+  // user rotate the key without re-running through the dashboard. Picking
+  // a different provider effectively clears OpenRouter for new runs (we
+  // still leave the old key on the project so existing deploys keep
+  // working until they redeploy with the new LLM_PROVIDER value).
+  const alreadyOnOpenRouter = existingEnvKeys.has("OPENROUTER_API_KEY");
 
   const llmProvider = ensure(
     await select<LlmProvider>({
@@ -93,10 +92,12 @@ async function askLlmProvider(
         },
         {
           value: "openrouter",
-          label: "OpenRouter (use your own OPENROUTER_API_KEY)",
+          label: alreadyOnOpenRouter
+            ? "OpenRouter (currently configured - choose to keep or rotate next)"
+            : "OpenRouter (use your own OPENROUTER_API_KEY)",
         },
       ],
-      initialValue: "vercel-ai-gateway",
+      initialValue: alreadyOnOpenRouter ? "openrouter" : "vercel-ai-gateway",
     }),
   );
 
@@ -104,8 +105,44 @@ async function askLlmProvider(
     return { llmProvider, openrouterApiKey: null };
   }
 
+  if (alreadyOnOpenRouter) {
+    return resolveExistingOrRotate();
+  }
   const openrouterApiKey = await resolveOpenRouterKey();
   return { llmProvider, openrouterApiKey };
+}
+
+/**
+ * Rotate prompt for the "key is already on the project" case. Defaults
+ * to keeping the existing key so a quick redeploy doesn't accidentally
+ * mint a new credential.
+ */
+async function resolveExistingOrRotate(): Promise<{
+  llmProvider: "openrouter";
+  openrouterApiKey: string | null;
+}> {
+  const action = ensure(
+    await select<"keep" | "browser" | "paste">({
+      message: "OPENROUTER_API_KEY is already set on this project.",
+      options: [
+        { value: "keep", label: "Keep the existing key" },
+        { value: "browser", label: "Rotate via browser login (PKCE)" },
+        { value: "paste", label: "Rotate by pasting a new key" },
+      ],
+      initialValue: "keep",
+    }),
+  );
+
+  if (action === "keep") {
+    log.info("Reusing the existing OpenRouter key.");
+    return { llmProvider: "openrouter", openrouterApiKey: null };
+  }
+  if (action === "browser") {
+    const key = await resolveOpenRouterKeyViaBrowserOrPaste();
+    return { llmProvider: "openrouter", openrouterApiKey: key };
+  }
+  const key = await promptPasteOpenRouterKey();
+  return { llmProvider: "openrouter", openrouterApiKey: key };
 }
 
 /**
@@ -113,8 +150,11 @@ async function askLlmProvider(
  * mints a scoped key without copy-paste; the user can opt for manual paste
  * (useful on headless boxes / SSH) or if the PKCE flow fails (no browser
  * available, network blocked, etc.) we fall back automatically.
+ *
+ * Exported so the standalone `set-openrouter-key` subcommand can reuse the
+ * same prompt logic.
  */
-async function resolveOpenRouterKey(): Promise<string> {
+export async function resolveOpenRouterKey(): Promise<string> {
   const useBrowser = ensure(
     await confirm({
       message:
@@ -124,16 +164,24 @@ async function resolveOpenRouterKey(): Promise<string> {
   );
 
   if (useBrowser) {
-    try {
-      return await resolveOpenRouterApiKey();
-    } catch (err) {
-      log.warn(
-        `Browser login failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      log.info("Falling back to manual key entry.");
-    }
+    return resolveOpenRouterKeyViaBrowserOrPaste();
   }
+  return promptPasteOpenRouterKey();
+}
 
+async function resolveOpenRouterKeyViaBrowserOrPaste(): Promise<string> {
+  try {
+    return await resolveOpenRouterApiKey();
+  } catch (err) {
+    log.warn(
+      `Browser login failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    log.info("Falling back to manual key entry.");
+    return promptPasteOpenRouterKey();
+  }
+}
+
+async function promptPasteOpenRouterKey(): Promise<string> {
   return ensure(
     await password({
       message: "Paste your OpenRouter API key (https://openrouter.ai/keys)",

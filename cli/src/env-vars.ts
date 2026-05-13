@@ -21,11 +21,52 @@ interface SetEnvArgs {
   openrouterApiKey: string | null;
 }
 
-interface EnvVarSpec {
+export interface EnvVarSpec {
   key: string;
   value: string;
   target: ("production" | "preview" | "development")[];
   type: "encrypted" | "plain";
+}
+
+export interface UpsertEnvVarsArgs {
+  token: string;
+  teamId: string | null;
+  projectId: string;
+  vars: EnvVarSpec[];
+}
+
+/**
+ * Upsert (POST + upsert=true) a list of env vars on a Vercel project. Shared
+ * by the deploy flow and the focused `set-openrouter-key` subcommand.
+ */
+export async function upsertEnvVars(args: UpsertEnvVarsArgs): Promise<void> {
+  if (args.vars.length === 0) return;
+
+  const s = spinner();
+  s.start("Setting environment variables");
+
+  for (const spec of args.vars) {
+    const url = args.teamId
+      ? `https://api.vercel.com/v10/projects/${args.projectId}/env?teamId=${args.teamId}&upsert=true`
+      : `https://api.vercel.com/v10/projects/${args.projectId}/env?upsert=true`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(spec),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      s.stop(`Failed to set ${spec.key}`);
+      throw new Error(`Failed to set ${spec.key}: ${res.status} ${body}`);
+    }
+  }
+
+  s.stop("Environment variables set");
 }
 
 export async function setEnvVars(args: SetEnvArgs): Promise<void> {
@@ -79,31 +120,10 @@ export async function setEnvVars(args: SetEnvArgs): Promise<void> {
     }
   }
 
-  if (vars.length === 0) return;
-
-  const s = spinner();
-  s.start("Setting environment variables");
-
-  for (const spec of vars) {
-    const url = args.teamId
-      ? `https://api.vercel.com/v10/projects/${args.projectId}/env?teamId=${args.teamId}&upsert=true`
-      : `https://api.vercel.com/v10/projects/${args.projectId}/env?upsert=true`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${args.token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(spec),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      s.stop(`Failed to set ${spec.key}`);
-      throw new Error(`Failed to set ${spec.key}: ${res.status} ${body}`);
-    }
-  }
-
-  s.stop("Environment variables set");
+  await upsertEnvVars({
+    token: args.token,
+    teamId: args.teamId,
+    projectId: args.projectId,
+    vars,
+  });
 }
