@@ -127,7 +127,16 @@ TrustClaw ships **without** rate limiting, per-user usage caps, or billing logic
 
 - A rate limiter on the chat + cron endpoints (e.g. [Upstash Rate Limit](https://upstash.com/docs/oss/sdks/ts/ratelimit/overview), [Vercel WAF Rate Limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting))
 - A monthly per-user message / tool-call cap enforced server-side
-- Billing or invite-only signup if you want to recoup costs
+- Billing if you want to recoup costs
+
+TrustClaw includes an opt-in invite-only signup gate for smaller trusted deployments:
+
+```bash
+ALLOW_OPEN_SIGNUP=false
+ADMIN_USER_EMAIL=you@example.com
+```
+
+With open signup disabled, new accounts must provide an unused invite code. The admin user can create and revoke codes at `/dashboard/admin/invites`.
 
 ---
 

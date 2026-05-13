@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
@@ -11,6 +12,12 @@ const rateLimitValueSchema = z.object({
   count: z.coerce.number(),
   lastRequest: z.coerce.number(),
 });
+
+const signUpBodySchema = z
+  .object({
+    inviteCode: z.string().trim().min(1).optional(),
+  })
+  .passthrough();
 
 const redisRateLimitStorage = isRedisConfigured()
   ? {
@@ -56,6 +63,50 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: false,
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user, ctx) => {
+          if (env.ALLOW_OPEN_SIGNUP) {
+            return { data: user };
+          }
+
+          const parsedBody = signUpBodySchema.safeParse(ctx?.body);
+          const inviteCode = parsedBody.success
+            ? parsedBody.data.inviteCode
+            : undefined;
+
+          if (!inviteCode) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Invite code required",
+            });
+          }
+
+          const now = new Date();
+          const result = await db.inviteCode.updateMany({
+            where: {
+              code: inviteCode,
+              usedAt: null,
+              usedByUser: null,
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            },
+            data: {
+              usedAt: now,
+              usedByUser: user.id,
+            },
+          });
+
+          if (result.count !== 1) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Invalid or expired invite code",
+            });
+          }
+
+          return { data: user };
+        },
+      },
+    },
   },
   plugins: [username(), nextCookies()],
   session: {

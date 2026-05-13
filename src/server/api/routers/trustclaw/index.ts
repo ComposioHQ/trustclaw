@@ -15,8 +15,10 @@ import { getMemories } from "./getMemories";
 import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
 import { checkConnectionStatus } from "./checkConnectionStatus";
+import { adminRouter } from "./admin";
 
 export const trustclawRouter = router({
+  admin: adminRouter,
   getInstance,
   getStatus,
   createInstance,
