@@ -11,6 +11,7 @@ export type ExecuteJobInput = z.infer<typeof executeJobInput>;
 export const cronJobRow = z.object({
   id: z.string(),
   instanceId: z.string(),
+  userId: z.string(),
   expression: z.string(),
   prompt: z.string(),
   timezone: z.string(),
