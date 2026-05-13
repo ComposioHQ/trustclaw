@@ -28,6 +28,22 @@ export const env = createEnv({
     // /api/cron/* endpoints. Vercel auto-injects this when crons are configured
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
     CRON_SECRET: z.string(),
+
+    // LLM provider routing.
+    //  - "vercel-ai-gateway" (default): LLM + embedding calls go through Vercel
+    //    AI Gateway. On Vercel deployments this auto-authenticates via
+    //    VERCEL_OIDC_TOKEN; locally you can set AI_GATEWAY_API_KEY or run
+    //    `vercel link && vercel env pull`.
+    //  - "openrouter": LLM + embedding calls go through OpenRouter using
+    //    OPENROUTER_API_KEY. The model and embedding ids stored in the DB are
+    //    mapped to OpenRouter slugs by src/server/clients/ai/model-mapping.ts.
+    //    Embeddings stay on openai/text-embedding-3-large with 1024 dims, so
+    //    existing pgvector rows remain compatible after switching.
+    LLM_PROVIDER: z
+      .enum(["vercel-ai-gateway", "openrouter"])
+      .default("vercel-ai-gateway"),
+    OPENROUTER_API_KEY: z.string().optional(),
+    AI_GATEWAY_API_KEY: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -43,6 +59,9 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     CRON_SECRET: process.env.CRON_SECRET,
+    LLM_PROVIDER: process.env.LLM_PROVIDER,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
 
     // Client URL resolution:
     //  - dev: derive from PORT so `PORT=3001 pnpm dev` just works
@@ -53,18 +72,33 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_URL:
       process.env.NODE_ENV === "development"
         ? `http://localhost:${process.env.PORT ?? "3000"}`
-        : process.env.NEXT_PUBLIC_APP_URL ??
+        : (process.env.NEXT_PUBLIC_APP_URL ??
           (process.env.VERCEL_PROJECT_PRODUCTION_URL
             ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
             : process.env.VERCEL_URL
               ? `https://${process.env.VERCEL_URL}`
-              : undefined),
+              : undefined)),
   },
   // SKIP_ENV_VALIDATION is for local lint/typecheck without a full .env.
   // Never honour it in production — security-critical secrets like
   // CRON_SECRET and BETTER_AUTH_SECRET must always be present at runtime.
   skipValidation:
-    !!process.env.SKIP_ENV_VALIDATION &&
-    process.env.NODE_ENV !== "production",
+    !!process.env.SKIP_ENV_VALIDATION && process.env.NODE_ENV !== "production",
   emptyStringAsUndefined: true,
 });
+
+// Cross-field validation: OpenRouter routing requires an API key. t3-env's
+// createEnv() validates each field independently, so this lives outside the
+// schema. Skipped in the same conditions as the rest of env validation.
+if (
+  !(
+    !!process.env.SKIP_ENV_VALIDATION && process.env.NODE_ENV !== "production"
+  ) &&
+  env.LLM_PROVIDER === "openrouter" &&
+  !env.OPENROUTER_API_KEY
+) {
+  throw new Error(
+    "LLM_PROVIDER=openrouter requires OPENROUTER_API_KEY to be set. " +
+      "Get a key at https://openrouter.ai/keys or switch LLM_PROVIDER back to vercel-ai-gateway.",
+  );
+}

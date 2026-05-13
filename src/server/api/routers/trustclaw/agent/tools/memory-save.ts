@@ -1,6 +1,7 @@
 import { zodSchema, embed } from "ai";
 import type { Tool } from "ai";
 import { db } from "~/server/clients/db";
+import { getEmbeddingModel } from "~/server/clients/ai";
 import { memorySaveSchema, type MemorySaveInput } from "./memory-save.schema";
 
 export function createMemorySaveTool(
@@ -11,7 +12,7 @@ export function createMemorySaveTool(
     inputSchema: zodSchema(memorySaveSchema),
     execute: async ({ content }) => {
       const { embedding } = await embed({
-        model: "openai/text-embedding-3-large",
+        model: getEmbeddingModel(),
         value: content,
         providerOptions: {
           openai: { dimensions: 1024 },

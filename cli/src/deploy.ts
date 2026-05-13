@@ -85,7 +85,10 @@ export async function deploy(): Promise<void> {
     // dir so prisma db push has a place to run.
     let migrationRepoRoot: string | undefined;
     if (localRepo) {
-      const choice = await confirmLocalPublish(localRepo, cachedConfig.githubRepoName);
+      const choice = await confirmLocalPublish(
+        localRepo,
+        cachedConfig.githubRepoName,
+      );
       if (choice) {
         await applyPlanConfig(localRepo.rootDir, auth.vercelBillingPlan);
         ({ repo } = await publishLocalCopy({
@@ -95,7 +98,9 @@ export async function deploy(): Promise<void> {
           rootDir: localRepo.rootDir,
           currentBranch: localRepo.currentBranch,
         }));
-        await saveConfig(localRepo.rootDir, { githubRepoName: choice.repoName });
+        await saveConfig(localRepo.rootDir, {
+          githubRepoName: choice.repoName,
+        });
         migrationRepoRoot = localRepo.rootDir;
       } else {
         ({ repo } = await forkRepo(auth.githubToken, auth.githubUsername));
@@ -150,6 +155,8 @@ export async function deploy(): Promise<void> {
       composioApiKey,
       hasBetterAuthSecret: existingEnvKeys.has("BETTER_AUTH_SECRET"),
       hasCronSecret: existingEnvKeys.has("CRON_SECRET"),
+      llmProvider: remaining.llmProvider,
+      openrouterApiKey: remaining.openrouterApiKey,
     });
 
     await runMigration({
