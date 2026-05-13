@@ -1,5 +1,7 @@
 import { generateText, stepCountIs } from "ai";
 import { db } from "~/server/clients/db";
+import { resolveModel } from "~/server/clients/nebius";
+import { toGatewayModelId } from "~/server/api/routers/trustclaw/models";
 import { createCustomTools } from "../tools";
 import { serializeMessages } from "./prompts";
 import type { ReconstructedMessage } from "../types";
@@ -50,9 +52,8 @@ export async function runMemoryFlush(
       return { memoriesSaved: 0 };
     }
 
-    const modelString = anthropicModel.startsWith("anthropic/")
-      ? anthropicModel
-      : `anthropic/${anthropicModel}`;
+    const model =
+      resolveModel(anthropicModel) ?? toGatewayModelId(anthropicModel);
 
     const allCustomTools = createCustomTools(instanceId);
     const memoryTools = {
@@ -64,7 +65,7 @@ export async function runMemoryFlush(
     const flushPrompt = `Here is the recent conversation context:\n\n${contextSummary}\n\n${FLUSH_USER_PROMPT}`;
 
     const result = await generateText({
-      model: modelString,
+      model,
       system: FLUSH_SYSTEM_PROMPT,
       messages: [{ role: "user" as const, content: flushPrompt }],
       tools: memoryTools,

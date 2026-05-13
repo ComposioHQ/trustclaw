@@ -1,46 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import type { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { trpc } from "~/clients/trpc";
 import { allowedAnthropicModelSchema } from "~/server/api/routers/trustclaw/createInstance.schema";
 import { Button } from "~/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import {
   showSuccessToast,
   trpcToastOnError,
 } from "~/components/core/toast-notifications";
+import type { RouterOutputs } from "~/clients/trpc";
 
-const MODELS = [
-  {
-    value: "claude-opus-4-6",
-    label: "Claude Opus 4.6",
-    description: "Most capable",
-  },
-  {
-    value: "claude-sonnet-4-5-20250929",
-    label: "Claude Sonnet 4.5",
-    description: "Balanced",
-  },
-  {
-    value: "claude-haiku-4-5-20251001",
-    label: "Claude Haiku 4.5",
-    description: "Fast & affordable",
-  },
-] as const;
-
-type AllowedModel = z.infer<typeof allowedAnthropicModelSchema>;
+type AvailableModel = RouterOutputs["trustclaw"]["getAvailableModels"]["models"][number];
 
 interface ModelSettingsProps {
   currentModel: string;
 }
 
 export function ModelSettings({ currentModel }: ModelSettingsProps) {
-  const parsed = allowedAnthropicModelSchema.catch("claude-sonnet-4-5-20250929").parse(currentModel);
-  const [selectedModel, setSelectedModel] = useState<AllowedModel>(parsed);
+  const { data, isLoading } = trpc.trustclaw.getAvailableModels.useQuery();
+  const [selectedModel, setSelectedModel] = useState<string>(currentModel);
   const utils = trpc.useUtils();
 
   const updateSettings = trpc.trustclaw.updateSettings.useMutation({
@@ -51,47 +47,92 @@ export function ModelSettings({ currentModel }: ModelSettingsProps) {
     onError: trpcToastOnError,
   });
 
+  const models = data?.models ?? [];
+  const anthropicModels = models.filter((m) => m.provider === "anthropic");
+  const nebiusModels = models.filter((m) => m.provider === "nebius");
+
   const hasChanges = selectedModel !== currentModel;
+  const modelIds = new Set(models.map((m) => m.id));
+  // If the persisted model is no longer in the available set (e.g. a Nebius id
+  // saved when the key was set, then NEBIUS_API_KEY was removed), keep showing
+  // the persisted value so the user can change away from it.
+  const placeholderForUnknown = !modelIds.has(selectedModel)
+    ? selectedModel
+    : undefined;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Model</CardTitle>
         <CardDescription>
-          Choose which Claude model powers your assistant
+          Choose which model powers your assistant
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Claude Model</Label>
+          <Label>Model</Label>
           <Select
             value={selectedModel}
-            onValueChange={(val) => {
-              const model = allowedAnthropicModelSchema.safeParse(val);
-              if (model.success) setSelectedModel(model.data);
-            }}
+            onValueChange={setSelectedModel}
+            disabled={isLoading}
           >
             <SelectTrigger className="w-full sm:w-72">
-              <SelectValue />
+              <SelectValue placeholder={placeholderForUnknown} />
             </SelectTrigger>
             <SelectContent>
-              {MODELS.map((m) => (
-                <SelectItem key={m.value} value={m.value}>
-                  <span>{m.label}</span>
-                  <span className="ml-2 text-muted-foreground">
-                    - {m.description}
-                  </span>
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Anthropic</SelectLabel>
+                {anthropicModels.map((m: AvailableModel) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span>{m.label}</span>
+                    <span className="ml-2 text-muted-foreground">
+                      - {m.description}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              {nebiusModels.length > 0 ? (
+                <SelectGroup>
+                  <SelectLabel>Nebius Token Factory</SelectLabel>
+                  {nebiusModels.map((m: AvailableModel) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span>{m.label}</span>
+                      <span className="ml-2 text-muted-foreground">
+                        - {m.description}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ) : null}
             </SelectContent>
           </Select>
+          {data && !data.nebiusEnabled ? (
+            <p className="text-xs text-muted-foreground">
+              To enable Nebius Token Factory models (DeepSeek, Qwen, Llama,
+              ...), set <code>NEBIUS_ROUTING=direct</code> with a{" "}
+              <code>NEBIUS_API_KEY</code> for direct access, or{" "}
+              <code>NEBIUS_ROUTING=gateway</code> after registering Nebius in
+              your Vercel AI Gateway settings.
+            </p>
+          ) : null}
+          {data?.nebiusEnabled && data.nebiusRouting ? (
+            <p className="text-xs text-muted-foreground">
+              Nebius models route{" "}
+              {data.nebiusRouting === "direct"
+                ? "directly to Token Factory"
+                : "through Vercel AI Gateway"}
+              .
+            </p>
+          ) : null}
         </div>
         <Button
           variant="outline"
-          disabled={!hasChanges || updateSettings.isPending}
-          onClick={() =>
-            void updateSettings.mutateAsync({ anthropicModel: selectedModel })
-          }
+          disabled={!hasChanges || updateSettings.isPending || isLoading}
+          onClick={() => {
+            const parsed = allowedAnthropicModelSchema.safeParse(selectedModel);
+            if (!parsed.success) return;
+            void updateSettings.mutateAsync({ anthropicModel: parsed.data });
+          }}
         >
           {updateSettings.isPending ? (
             <>

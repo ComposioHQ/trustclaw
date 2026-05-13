@@ -1,7 +1,12 @@
 import { ToolLoopAgent, stepCountIs } from "ai";
-import type { ToolSet, SystemModelMessage } from "ai";
+import type { ToolSet, SystemModelMessage, LanguageModel } from "ai";
 import { db } from "~/server/clients/db";
 import { createComposioClient } from "~/server/clients/composio";
+import { resolveModel } from "~/server/clients/nebius";
+import {
+  toGatewayModelId,
+  isAnthropicModel,
+} from "~/server/api/routers/trustclaw/models";
 import { buildSystemPrompt } from "./system-prompt";
 import {
   createCustomTools,
@@ -116,9 +121,14 @@ export async function prepareAgentRun(
   const contextWindow = getContextWindow(instance.anthropicModel);
   const { messages: prunedMessages } = pruneContext(aiMessages, contextWindow);
 
+  const isAnthropic = isAnthropicModel(instance.anthropicModel);
+
   // Add cache breakpoint to last history message (before new user message)
-  // so the conversation prefix is cached across turns
-  if (prunedMessages.length >= 2) {
+  // so the conversation prefix is cached across turns.
+  // Only meaningful for Anthropic — even when routed through AI Gateway,
+  // `cacheControl` is an Anthropic-specific provider option that other
+  // providers (e.g. Nebius via Gateway) will ignore or reject.
+  if (isAnthropic && prunedMessages.length >= 2) {
     const lastHistoryIndex = prunedMessages.length - 2;
     const msg = prunedMessages[lastHistoryIndex]!;
     prunedMessages[lastHistoryIndex] = {
@@ -168,20 +178,26 @@ export async function prepareAgentRun(
     },
   });
 
-  const modelString = instance.anthropicModel.startsWith("anthropic/")
-    ? instance.anthropicModel
-    : `anthropic/${instance.anthropicModel}`;
-  const model = modelString;
+  // Model resolution: Nebius ids in direct routing mode use the dedicated
+  // OpenAI-compatible client; everything else (Anthropic always, Nebius in
+  // gateway mode) flows through Vercel AI Gateway via the string-model form.
+  const directClient = resolveModel(instance.anthropicModel);
+  const model: LanguageModel =
+    directClient ?? toGatewayModelId(instance.anthropicModel);
+
+  const systemMessage: SystemModelMessage = isAnthropic
+    ? {
+        role: "system",
+        content: systemPrompt,
+        providerOptions: {
+          anthropic: { cacheControl: { type: "ephemeral" } },
+        },
+      }
+    : { role: "system", content: systemPrompt };
 
   const agent = new ToolLoopAgent({
     model,
-    instructions: {
-      role: "system",
-      content: systemPrompt,
-      providerOptions: {
-        anthropic: { cacheControl: { type: "ephemeral" } },
-      },
-    } satisfies SystemModelMessage,
+    instructions: systemMessage,
     tools: allTools,
     stopWhen: stepCountIs(100),
     onFinish: async (result) => {
