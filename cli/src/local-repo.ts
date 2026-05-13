@@ -1,11 +1,26 @@
-import { exec as _exec } from "child_process";
+import { execFile as _execFile } from "child_process";
 import { promisify } from "util";
 import { readFile, mkdir } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spinner, log, confirm, isCancel, cancel, text } from "@clack/prompts";
 
-const exec = promisify(_exec);
+const execFile = promisify(_execFile);
+
+// Run `git` with an explicit argv array — no shell, no string interpolation.
+// This prevents shell-metachar injection through values like a branch name
+// (e.g. `main;rm -rf ~`) that the previous `exec(\`git ... ${branch}\`)` form
+// would have parsed and executed.
+async function runGit(
+  args: string[],
+  opts: { cwd?: string } = {},
+): Promise<{ stdout: string; stderr: string }> {
+  const result = await execFile("git", args, opts);
+  return {
+    stdout: result.stdout.toString(),
+    stderr: result.stderr.toString(),
+  };
+}
 
 export interface LocalRepoInfo {
   rootDir: string;
@@ -15,7 +30,7 @@ export interface LocalRepoInfo {
 
 export async function detectLocalRepo(): Promise<LocalRepoInfo | null> {
   try {
-    const { stdout: rootRaw } = await exec("git rev-parse --show-toplevel");
+    const { stdout: rootRaw } = await runGit(["rev-parse", "--show-toplevel"]);
     const rootDir = rootRaw.trim();
     if (!rootDir) return null;
 
@@ -23,12 +38,13 @@ export async function detectLocalRepo(): Promise<LocalRepoInfo | null> {
     const pkg = JSON.parse(pkgRaw) as { name?: string };
     if (pkg.name !== "trustclaw") return null;
 
-    const { stdout: branchRaw } = await exec("git rev-parse --abbrev-ref HEAD", {
-      cwd: rootDir,
-    });
+    const { stdout: branchRaw } = await runGit(
+      ["rev-parse", "--abbrev-ref", "HEAD"],
+      { cwd: rootDir },
+    );
     const currentBranch = branchRaw.trim();
 
-    const { stdout: statusRaw } = await exec("git status --porcelain", {
+    const { stdout: statusRaw } = await runGit(["status", "--porcelain"], {
       cwd: rootDir,
     });
     const hasUncommittedChanges = statusRaw.trim().length > 0;
@@ -101,16 +117,18 @@ export async function publishLocalCopy(args: PublishArgs): Promise<{ repo: strin
   const remoteUrl = `https://x-access-token:${token}@github.com/${targetRepo}.git`;
   // Use a temp remote name to avoid clobbering the user's existing remotes.
   const remoteName = `trustclaw-deploy-${Date.now()}`;
-  const pushFlag = forceOverwrite ? "--force" : "";
 
   try {
-    await exec(`git remote add ${remoteName} ${remoteUrl}`, { cwd: rootDir });
-    await exec(`git push ${pushFlag} ${remoteName} ${currentBranch}:main`, {
-      cwd: rootDir,
-    });
+    await runGit(["remote", "add", remoteName, remoteUrl], { cwd: rootDir });
+    const pushArgs = ["push"];
+    if (forceOverwrite) pushArgs.push("--force");
+    pushArgs.push(remoteName, `${currentBranch}:main`);
+    await runGit(pushArgs, { cwd: rootDir });
   } finally {
     // Always clean up the temp remote, even on push failure.
-    await exec(`git remote remove ${remoteName}`, { cwd: rootDir }).catch(() => {});
+    await runGit(["remote", "remove", remoteName], { cwd: rootDir }).catch(
+      () => {},
+    );
   }
 
   s.stop(`Pushed to ${targetRepo}`);
@@ -136,7 +154,7 @@ export async function cloneForkLocally(args: {
   s.start(`Cloning ${repoSlug} for migration step`);
   const cloneUrl = `https://x-access-token:${token}@github.com/${repoSlug}.git`;
   try {
-    await exec(`git clone --depth 1 ${cloneUrl} ${targetDir}`);
+    await runGit(["clone", "--depth", "1", cloneUrl, targetDir]);
     s.stop(`Cloned ${repoSlug} to ${targetDir}`);
   } catch (err) {
     s.stop(`Failed to clone ${repoSlug}`);
