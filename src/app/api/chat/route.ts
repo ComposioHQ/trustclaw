@@ -7,6 +7,7 @@ import {
   setStreamingMessage,
   getStreamingMessage,
 } from "~/server/clients/redis";
+import { rateLimit } from "~/server/clients/rate-limit";
 import { getStreamContext } from "./stream-store";
 import { TRPCError } from "@trpc/server";
 
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { instanceId } = authResult;
+  const { instanceId, userId } = authResult;
 
   const body = chatRequestBody.safeParse(await request.json());
   if (!body.success) {
@@ -72,6 +73,17 @@ export async function POST(request: Request) {
       .join("\n") ?? "";
   if (!userText.trim()) {
     return new Response("Empty message", { status: 400 });
+  }
+
+  const limit = await rateLimit(userId, "chat");
+  if (!limit.allowed) {
+    return new Response(JSON.stringify({ error: "rate_limit_exceeded" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(limit.retryAfterSeconds),
+      },
+    });
   }
 
   const prepareResult = await prepareAgentRun({

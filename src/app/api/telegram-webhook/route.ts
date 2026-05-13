@@ -3,6 +3,7 @@ import { after, NextResponse } from "next/server";
 import { env } from "~/env";
 import { db } from "~/server/clients/db";
 import { sendTelegramMessage, sendChatAction } from "~/server/clients/telegram";
+import { rateLimit } from "~/server/clients/rate-limit";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
 import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
 import { toPlainRecordSafe } from "~/server/api/routers/trustclaw/agent/context/build-context";
@@ -152,13 +153,22 @@ async function handleRegularMessage(
 ): Promise<void> {
   const instance = await db.composioClawInstance.findUnique({
     where: { telegramChatId: chatId },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
 
   if (!instance) {
     await sendTelegramMessage(
       chatId,
       `I don't recognize this chat. Link me from ${env.NEXT_PUBLIC_APP_URL}/dashboard/settings`,
+    );
+    return;
+  }
+
+  const limit = await rateLimit(instance.userId, "telegram");
+  if (!limit.allowed) {
+    await sendTelegramMessage(
+      chatId,
+      `You're sending messages too quickly. Please try again in ${limit.retryAfterSeconds} seconds.`,
     );
     return;
   }
