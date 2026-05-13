@@ -16,7 +16,7 @@ When you need to look up documentation for any of these libraries, use the **Con
 
 ## Architecture
 
-This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio functionality is accessed server-side using a global API key. All LLM and embedding calls route through **Vercel AI Gateway** via plain string model IDs (e.g., `'claude-sonnet-4-5-20250929'`). Auth uses `VERCEL_OIDC_TOKEN` on Vercel deployments, or `AI_GATEWAY_API_KEY` for local dev.
+This dashboard uses a **single tRPC backend** running within Next.js. Auth is handled by Better Auth with username/password. Composio functionality is accessed server-side using a global API key. By default, all LLM and embedding calls route through **Vercel AI Gateway** via plain string model IDs (e.g., `'claude-sonnet-4-5-20250929'`). Auth uses `VERCEL_OIDC_TOKEN` on Vercel deployments, or `AI_GATEWAY_API_KEY` for local dev. Nebius Token Factory is an optional second provider — see [Model providers](#model-providers) below.
 
 ### tRPC (Backend)
 
@@ -48,6 +48,18 @@ This dashboard uses a **single tRPC backend** running within Next.js. Auth is ha
 │                      │    │   + username/password       │
 └──────────────────────┘    └─────────────────────────────┘
 ```
+
+### Model providers
+
+The chat-model catalog and routing are centralized:
+
+- **`src/server/api/routers/trustclaw/models.ts`** — single source of truth for available models (Anthropic + Nebius). The Zod enum, settings page, and onboarding step all read from this file. Don't duplicate model lists elsewhere.
+- **`getAvailableModels` tRPC query** — gates Nebius behind the `NEBIUS_ROUTING` env flag and returns the active routing mode so the UI can label which path is in use.
+- **`agent/setup.ts` (+ compaction call sites)** — calls `resolveModel(modelId)` first; if it returns a `LanguageModel` (Nebius in direct mode), use it. Otherwise fall through to `toGatewayModelId(modelId)` which yields a `provider/id` string that Vercel AI Gateway resolves.
+
+The DB column is named `instance.anthropicModel` for historical reasons — it now stores any provider's id (e.g. `nebius/deepseek-ai/DeepSeek-V3.2`). The name is kept to avoid a migration; treat it as "selected model id".
+
+Anthropic `cacheControl` provider options are gated on `isAnthropicModel(modelId)` — even when Nebius routes through Gateway, those options are Anthropic-specific.
 
 ## Principles
 
@@ -525,6 +537,7 @@ Some features use external SDKs directly. These clients live in `src/server/clie
 ```
 src/server/clients/
 ├── composio.ts   # Composio SDK (@composio/core) - uses global COMPOSIO_API_KEY from env
+├── nebius.ts     # Nebius Token Factory client (@ai-sdk/openai-compatible) - direct mode only
 ├── telegram.ts   # Telegram Bot API helper
 ├── redis.ts      # Redis client (resumable streams, streaming state, abort flags)
 └── db.ts         # Prisma client

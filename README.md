@@ -49,7 +49,7 @@ LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or Open
 
 ### What it can do
 
-- Chat with Claude in a Next.js dashboard or via a Telegram bot
+- Chat with Anthropic Claude — or, optionally, Nebius-hosted OSS models (DeepSeek, Qwen, Llama, GLM, gpt-oss) — in a Next.js dashboard or via a Telegram bot
 - Long-term memory backed by Postgres + pgvector
 - 3-layer context management (pruning, memory flush, summarization compaction) so conversations can run indefinitely
 - 1000+ Composio tool integrations (Gmail, GitHub, Slack, Notion, Linear, Calendar, Drive, Stripe, HubSpot, …) gated by the user's connected accounts
@@ -110,6 +110,22 @@ The design choices:
 
 ---
 
+## 🧠 Model providers
+
+By default, every LLM call routes through Vercel AI Gateway to **Anthropic Claude** — no API keys needed, OIDC authenticates automatically. To add **Nebius Token Factory** as a second provider for open-source models (DeepSeek, Qwen, Llama, GLM, gpt-oss), set `NEBIUS_ROUTING` to one of:
+
+| Mode | What it does | Setup |
+|---|---|---|
+| `direct` | Call Nebius's OpenAI-compatible endpoint directly | Set `NEBIUS_API_KEY` ([get one](https://studio.nebius.com/)) |
+| `gateway` | Route through Vercel AI Gateway as a first-class provider | Register Nebius in your Vercel project's AI Gateway settings |
+| _unset_ | Nebius models hidden from the picker (default) | — |
+
+Once enabled, Nebius models appear alongside Anthropic in the onboarding step and the settings page; each user picks per-instance.
+
+**Which mode?** `direct` gives the lowest latency and a transparent Nebius bill. `gateway` adds a hop but consolidates observability and billing through Vercel. Anthropic always routes through AI Gateway regardless.
+
+---
+
 ## ⚠️ Before deploying to production
 
 ### Heads-up about the Vercel free (Hobby) plan
@@ -158,6 +174,9 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 | `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |
 | `TELEGRAM_BOT_USERNAME` _(optional)_ | Telegram bot |
 | `TELEGRAM_WEBHOOK_SECRET` _(optional)_ | Telegram webhook auth |
+| `NEBIUS_ROUTING` _(optional)_ | `direct` or `gateway` — enables Nebius models. See [Model providers](#-model-providers) |
+| `NEBIUS_API_KEY` _(optional)_ | Required when `NEBIUS_ROUTING=direct` |
+| `NEBIUS_BASE_URL` _(optional)_ | Override the default EU endpoint (e.g. for us-central1) |
 
 See [`.env.example`](./.env.example) for the full template.
 
