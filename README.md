@@ -55,6 +55,7 @@ LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or Open
 - 1000+ Composio tool integrations (Gmail, GitHub, Slack, Notion, Linear, Calendar, Drive, Stripe, HubSpot, …) gated by the user's connected accounts
 - Cron-scheduled agent runs for recurring tasks
 - Username/password login via Better Auth
+- Computer use via [opendesk](https://github.com/vitalops/opendesk) — screenshot, mouse, keyboard, OCR, and more (self-hosted only, opt-in)
 
 ---
 
@@ -155,6 +156,7 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 | `COMPOSIO_API_KEY` | Composio tool integrations |
 | `CRON_SECRET` | Auth for `/api/cron/*` routes (auto-injected on Vercel) |
 | `REDIS_URL` _(optional)_ | Resumable streams + abort flags |
+| `COMPUTER_USE_ENABLED` _(optional)_ | Set to any value to enable computer use tools (local/self-hosted only — requires [opendesk](https://github.com/vitalops/opendesk)) |
 | `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |
 | `TELEGRAM_BOT_USERNAME` _(optional)_ | Telegram bot |
 | `TELEGRAM_WEBHOOK_SECRET` _(optional)_ | Telegram webhook auth |
