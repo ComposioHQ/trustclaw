@@ -12,6 +12,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/bin.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
     "prepublishOnly": "tsc"
   },
   "repository": {
@@ -38,6 +40,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "4.1.6"
   }
 }
