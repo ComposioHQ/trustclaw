@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { Prisma } from "~/generated/prisma/client";
 import { z } from "zod";
@@ -46,7 +47,12 @@ export async function GET(request: Request) {
       });
     }
     const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${env.CRON_SECRET}`) {
+    const expected = Buffer.from(`Bearer ${env.CRON_SECRET}`);
+    const actual = Buffer.from(auth);
+    if (
+      actual.length !== expected.length ||
+      !timingSafeEqual(actual, expected)
+    ) {
       return new Response("Unauthorized", { status: 401 });
     }
   }
