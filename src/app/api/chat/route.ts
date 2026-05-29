@@ -7,6 +7,11 @@ import {
   setStreamingMessage,
   getStreamingMessage,
 } from "~/server/clients/redis";
+import {
+  getChatRatelimit,
+  checkToolCallCap,
+  MONTHLY_TOOL_CAP,
+} from "~/server/clients/ratelimit";
 import { getStreamContext } from "./stream-store";
 import { TRPCError } from "@trpc/server";
 
@@ -47,7 +52,43 @@ export async function POST(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { instanceId } = authResult;
+  const { userId, instanceId } = authResult;
+
+  // Rate limit (sliding window)
+  const limiter = getChatRatelimit();
+  if (limiter) {
+    const { success, reset } = await limiter.limit(userId);
+    if (!success) {
+      const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded. Please slow down.",
+          retryAfter,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(retryAfter),
+          },
+        },
+      );
+    }
+  }
+
+  // Monthly tool-call cap
+  const capCheck = await checkToolCallCap(userId);
+  if (!capCheck.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: `Monthly tool-call limit reached (${MONTHLY_TOOL_CAP}). Resets on the 1st of next month.`,
+      }),
+      {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
 
   const body = chatRequestBody.safeParse(await request.json());
   if (!body.success) {
