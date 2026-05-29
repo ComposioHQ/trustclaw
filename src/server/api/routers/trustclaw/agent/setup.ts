@@ -24,6 +24,7 @@ import {
 } from "./context/token-estimation";
 import { stripToolResultEchoes } from "./strip-tool-echoes";
 import { clearStreamingMessage } from "~/server/clients/redis";
+import { incrementToolCallCount } from "~/server/clients/ratelimit";
 import type { ReconstructedMessage } from "./types";
 
 type MessageSource = "web" | "telegram" | "cron";
@@ -231,6 +232,19 @@ export async function prepareAgentRun(
             cacheWriteTokens,
           },
         });
+
+        // Track tool-call usage for monthly cap
+        const toolCallCount = steps.reduce(
+          (sum, step) => sum + step.toolCalls.length,
+          0,
+        );
+        void incrementToolCallCount(instance.userId, toolCallCount).catch(
+          (err) =>
+            console.error(
+              "[agent/onFinish] tool-call count increment failed:",
+              err,
+            ),
+        );
 
         // Fire-and-forget post-response tasks
         const totalContextTokens = inputTokens + outputTokens;
