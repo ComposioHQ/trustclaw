@@ -12,9 +12,13 @@ import { showErrorToast } from "~/components/core/toast-notifications";
 
 interface LoginPageProps {
   firstTime?: boolean;
+  inviteOnlySignup?: boolean;
 }
 
-export function LoginPage({ firstTime = false }: LoginPageProps) {
+export function LoginPage({
+  firstTime = false,
+  inviteOnlySignup = false,
+}: LoginPageProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -27,6 +31,7 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regName, setRegName] = useState("");
+  const [regInviteCode, setRegInviteCode] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,12 +55,20 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
     e.preventDefault();
     setPending(true);
     try {
-      const result = await authClient.signUp.email({
+      const signUpInput: Parameters<typeof authClient.signUp.email>[0] & {
+        inviteCode?: string;
+      } = {
         email: regEmail,
         password: regPassword,
         username: regUsername,
         name: regName,
-      });
+      };
+
+      if (inviteOnlySignup) {
+        signUpInput.inviteCode = regInviteCode;
+      }
+
+      const result = await authClient.signUp.email(signUpInput);
       if (result.error) {
         showErrorToast(result.error.message ?? "Failed to create account");
         return;
@@ -159,6 +172,19 @@ export function LoginPage({ firstTime = false }: LoginPageProps) {
                     onChange={(e) => setRegPassword(e.target.value)}
                   />
                 </div>
+                {inviteOnlySignup && (
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-invite-code">Invite code</Label>
+                    <Input
+                      id="reg-invite-code"
+                      type="text"
+                      autoComplete="off"
+                      required
+                      value={regInviteCode}
+                      onChange={(e) => setRegInviteCode(e.target.value)}
+                    />
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending ? "Creating account..." : "Create account"}
                 </Button>
