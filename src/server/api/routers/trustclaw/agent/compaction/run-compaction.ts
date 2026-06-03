@@ -3,6 +3,7 @@
 // Fallback chain from openclaw: src/agents/compaction.ts:176-242
 import { generateText } from "ai";
 import { db } from "~/server/clients/db";
+import { getLanguageModel } from "~/server/clients/ai";
 import type { ReconstructedMessage } from "../types";
 import { estimateMessageTokens } from "../context/token-estimation";
 import {
@@ -69,12 +70,10 @@ async function summarize(
   conversationText: string,
   previousSummary: string | null,
 ): Promise<string> {
-  const modelString = anthropicModel.startsWith("anthropic/")
-    ? anthropicModel
-    : `anthropic/${anthropicModel}`;
-
   const safeConversation = sanitizeString(conversationText);
-  const safePreviousSummary = previousSummary ? sanitizeString(previousSummary) : null;
+  const safePreviousSummary = previousSummary
+    ? sanitizeString(previousSummary)
+    : null;
 
   let prompt: string;
   if (safePreviousSummary) {
@@ -84,7 +83,7 @@ async function summarize(
   }
 
   const result = await generateText({
-    model: modelString,
+    model: getLanguageModel(anthropicModel),
     system: COMPACTION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
     maxOutputTokens: 4_000,
@@ -117,11 +116,8 @@ async function stagedSummarize(
     firstSummary,
   );
 
-  const mergeModelString = anthropicModel.startsWith("anthropic/")
-    ? anthropicModel
-    : `anthropic/${anthropicModel}`;
   const mergeResult = await generateText({
-    model: mergeModelString,
+    model: getLanguageModel(anthropicModel),
     system: COMPACTION_SYSTEM_PROMPT,
     messages: [
       {
@@ -145,7 +141,13 @@ function stripLargeToolResults(
       content: msg.content.map((part) => {
         const outputStr = JSON.stringify(part.output);
         if (outputStr.length > LARGE_TOOL_RESULT_THRESHOLD) {
-          return { ...part, output: { type: "text" as const, value: "[Large tool result omitted]" } };
+          return {
+            ...part,
+            output: {
+              type: "text" as const,
+              value: "[Large tool result omitted]",
+            },
+          };
         }
         return part;
       }),
@@ -156,7 +158,14 @@ function stripLargeToolResults(
 export async function runCompaction(
   params: CompactionParams,
 ): Promise<CompactionResult | null> {
-  const { instanceId, anthropicModel, messages, keepRecentTokens, previousSummary, compactionCount } = params;
+  const {
+    instanceId,
+    anthropicModel,
+    messages,
+    keepRecentTokens,
+    previousSummary,
+    compactionCount,
+  } = params;
 
   const cutIndex = findCutPoint(messages, keepRecentTokens);
   if (cutIndex <= 0) return null;
@@ -186,11 +195,7 @@ export async function runCompaction(
     try {
       const stripped = stripLargeToolResults(messagesToCompact);
       const strippedText = serializeMessages(stripped);
-      summary = await summarize(
-        anthropicModel,
-        strippedText,
-        previousSummary,
-      );
+      summary = await summarize(anthropicModel, strippedText, previousSummary);
     } catch {
       summary = `Conversation covered ${messagesToCompact.length} messages. Summary unavailable due to context limits.`;
     }

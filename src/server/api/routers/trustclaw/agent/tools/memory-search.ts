@@ -2,6 +2,7 @@ import { z } from "zod";
 import { zodSchema, embed } from "ai";
 import type { Tool } from "ai";
 import { db } from "~/server/clients/db";
+import { getEmbeddingModel } from "~/server/clients/ai";
 import {
   memorySearchSchema,
   type MemorySearchInput,
@@ -31,7 +32,7 @@ export function createMemorySearchTool(instanceId: string): Tool<
     execute: async ({ query, maxResults }) => {
       const limit = maxResults ?? 5;
       const { embedding: queryEmbedding } = await embed({
-        model: "openai/text-embedding-3-large",
+        model: getEmbeddingModel(),
         value: query,
         providerOptions: {
           openai: { dimensions: 1024 },
@@ -69,7 +70,7 @@ export async function searchMemoriesForContext(
 ): Promise<string[]> {
   try {
     const { embedding: queryEmbedding } = await embed({
-      model: "openai/text-embedding-3-large",
+      model: getEmbeddingModel(),
       value: query,
       providerOptions: {
         openai: { dimensions: 1024 },
