@@ -105,6 +105,28 @@ export const auth = betterAuth({
 
           return { data: user };
         },
+        after: async (user, ctx) => {
+          if (env.ALLOW_OPEN_SIGNUP) {
+            return;
+          }
+
+          const parsedBody = signUpBodySchema.safeParse(ctx?.body);
+          const inviteCode = parsedBody.success
+            ? parsedBody.data.inviteCode
+            : undefined;
+
+          if (!inviteCode) {
+            return;
+          }
+
+          // The `before` hook claims the code (sets usedAt) before the user
+          // id exists, leaving usedByUser null. Backfill it now so the admin
+          // invite list records who redeemed each code.
+          await db.inviteCode.updateMany({
+            where: { code: inviteCode, usedByUser: null },
+            data: { usedByUser: user.id },
+          });
+        },
       },
     },
   },
