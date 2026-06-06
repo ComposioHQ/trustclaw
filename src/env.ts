@@ -17,6 +17,26 @@ export const env = createEnv({
     // Composio API (global key)
     COMPOSIO_API_KEY: z.string(),
 
+    // --- Nebius Token Factory (optional) ---
+    //
+    // Two routing modes for Nebius-hosted OSS models (DeepSeek, Qwen, Llama,
+    // GLM, ...). Pick one:
+    //
+    //   direct (default)
+    //     Hit Nebius's OpenAI-compatible endpoint with NEBIUS_API_KEY. Lowest
+    //     latency, transparent Nebius billing, simplest setup.
+    //
+    //   gateway
+    //     Route through Vercel AI Gateway as a first-class provider. Requires
+    //     registering a Nebius credential in the project's AI Gateway settings.
+    //     Unified observability + one Vercel bill at the cost of an extra hop.
+    //
+    // Nebius is hidden from the model picker when neither mode is usable
+    // (no API key in direct mode; flag unset entirely).
+    NEBIUS_ROUTING: z.enum(["direct", "gateway"]).optional(),
+    NEBIUS_API_KEY: z.string().optional(),
+    NEBIUS_BASE_URL: z.string().url().optional(),
+
     // Telegram bot (optional - Telegram features disabled when missing)
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_BOT_USERNAME: z.string().optional(),
@@ -53,6 +73,9 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY,
+    NEBIUS_ROUTING: process.env.NEBIUS_ROUTING,
+    NEBIUS_API_KEY: process.env.NEBIUS_API_KEY,
+    NEBIUS_BASE_URL: process.env.NEBIUS_BASE_URL,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
