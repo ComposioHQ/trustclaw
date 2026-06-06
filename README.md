@@ -183,3 +183,138 @@ For security issues, email [sarah@composio.dev](mailto:sarah@composio.dev) direc
 MIT - see [LICENSE](./LICENSE).
 
 Built on top of [Composio](https://composio.dev). Inspired by [OpenClaw](https://github.com/openclaw/openclaw), rebuilt for security.
+
+---
+
+## ❓ Frequently Asked Questions
+
+### General
+
+**Q: What is TrustClaw?**
+
+TrustClaw is a **24/7 personal AI assistant** with 1000+ tools via OAuth and sandboxed execution. It works while you sleep, handles recurring tasks on autopilot, and talks to you on the web or Telegram.
+
+**Q: Why TrustClaw over local AI agents?**
+
+| Feature | TrustClaw | Local Agents |
+|---|---|---|
+| **Setup** | Seconds | Hours |
+| **Credentials** | Encrypted OAuth | Plaintext config |
+| **Execution** | Remote sandbox | Your machine |
+| **Integrations** | 1000+ apps | Manual setup |
+| **Security** | Audit trails | None |
+| **Revocation** | One click | Delete files |
+
+**Q: What can TrustClaw do?**
+
+| Capability | Description |
+|---|---|
+| **Chat with Claude** | Next.js dashboard or Telegram bot |
+| **Long-term Memory** | Postgres + pgvector storage |
+| **3-layer Context** | Pruning, flush, compaction |
+| **1000+ Tools** | Gmail, GitHub, Slack, Notion, Linear, etc. |
+| **Cron Scheduling** | Recurring task automation |
+| **Better Auth** | Username/password login |
+
+### Deployment
+
+**Q: How do I deploy TrustClaw?**
+
+Two options:
+
+1. **Vercel Template**: Click "Deploy with Vercel" button → ~2 minutes
+2. **CLI**: `npx @composio/trustclaw deploy`
+
+**Q: What are the prerequisites?**
+
+- Vercel account (`npx vercel login`)
+- GitHub account (`gh auth login`)
+- Composio API key (free at dashboard.composio.dev)
+
+**Q: Do I need Anthropic/OpenAI API keys?**
+
+**No.** LLM calls route through Vercel AI Gateway automatically.
+
+### Security
+
+**Q: How does OAuth security work?**
+
+- **No raw API keys to agent**: Composio brokers OAuth
+- **No code on your machine**: Remote sandbox execution
+- **No shell access**: Isolated environment per task
+
+**Q: What happens if an email contains malicious code?**
+
+Prompt injection can't `rm -rf` your laptop because:
+- Agent has no shell on your machine
+- Execution is in isolated cloud environment
+- Environment is destroyed after task completion
+
+### Tech Stack
+
+**Q: What technologies does TrustClaw use?**
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15 + React 19 |
+| **Backend** | tRPC + Better Auth |
+| **Database** | Postgres + pgvector |
+| **LLM** | Vercel AI Gateway |
+| **Tools** | Composio SDK (1000+ apps) |
+| **UI** | Tailwind + shadcn/ui |
+| **Cache** | Redis (optional) |
+
+### Limitations
+
+**Q: What are Vercel Hobby plan limits?**
+
+| Limit | Hobby Plan | Pro Plan |
+|---|---|---|
+| **Cron frequency** | Daily only | Per-minute |
+| **Function timeout** | 300s (5 min) | 800s (~13 min) |
+
+Upgrade to [Vercel Pro](https://vercel.com/pricing) for longer tasks.
+
+**Q: How do I prevent abuse?**
+
+Default rate limits:
+- `RATE_LIMIT_CHAT_PER_MINUTES` / `RATE_LIMIT_CHAT_PER_DAY`
+- `RATE_LIMIT_CRON_PER_DAY`
+- `RATE_LIMIT_TELEGRAM_PER_MINUTE`
+
+For public instances, add:
+- Monthly per-user cap
+- Billing or invite-only signup
+
+### Troubleshooting
+
+**Q: Cron jobs aren't running?**
+
+Check:
+1. `CRON_SECRET` environment variable set
+2. Vercel Hobby: daily only, 60-minute window
+3. Upgrade to Pro for per-minute precision
+
+**Q: Agent times out?**
+
+- Hobby: 5-minute limit
+- Pro: 13-minute limit
+- Split long tasks into smaller steps
+
+### Community & Support
+
+| Resource | Link |
+|---|---|
+| **GitHub Issues** | [github.com/ComposioHQ/trustclaw/issues](https://github.com/ComposioHQ/trustclaw/issues) |
+| **Contributing** | [CONTRIBUTING.md](./CONTRIBUTING.md) |
+| **Security Issues** | sarah@composio.dev |
+| **Composio Docs** | [composio.dev](https://composio.dev) |
+| **Demo Video** | [X/Twitter Demo](https://x.com/sarahfim/status/2022518658048888916) |
+
+### License
+
+**Q: Is TrustClaw free and open source?**
+
+Yes! **MIT License** - see [LICENSE](./LICENSE). Self-host for free, pay only for:
+- Vercel hosting (Hobby free, Pro $20/mo)
+- Composio API (free tier available)
