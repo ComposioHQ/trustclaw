@@ -64,7 +64,7 @@ export const env = createEnv({
     RATE_LIMIT_TELEGRAM_PER_MINUTE:
       process.env.RATE_LIMIT_TELEGRAM_PER_MINUTE,
     RATE_LIMIT_FAIL_MODE:
-      process.env.RATE_LIMIT_FAIL_MODE ||
+      process.env.RATE_LIMIT_FAIL_MODE ??
       ((process.env.NODE_ENV ?? "development") === "development"
         ? "open"
         : "closed"),
