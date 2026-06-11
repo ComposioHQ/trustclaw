@@ -61,6 +61,7 @@ export const INTEGRATION_DESCRIPTIONS: Record<string, string> = {
   gmail: "Read and send emails",
   github: "Manage repos and issues",
   slack: "Send and read messages",
+  tavily: "Search the web for up-to-date information",
 };
 
 export const WRITING_STYLE_ITEM_MAP: Record<WritingStyleKey, string> = {
