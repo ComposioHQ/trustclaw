@@ -8,7 +8,7 @@ A 24/7 personal AI assistant with 1000+ tools via **OAuth** and **sandboxed exec
 
 [Demo Video](https://x.com/sarahfim/status/2022518658048888916)
 [Open Source Launch Video](https://x.com/sarahfim/status/2053989393036145121)
-[![Star History Chart](https://api.star-history.com/svg?repos=ComposioHQ/trustclaw&type=Date)](https://star-history.com/#bytebase/star-history&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=ComposioHQ/trustclaw&type=Date)](https://star-history.dera.page/#ComposioHQ/trustclaw&Date)
 
 ---
 
