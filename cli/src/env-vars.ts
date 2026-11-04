@@ -1,5 +1,6 @@
 import { spinner } from "@clack/prompts";
 import crypto from "crypto";
+import type { askGlenSetup } from "./glen-setup.js";
 
 interface SetEnvArgs {
   token: string;
@@ -11,6 +12,8 @@ interface SetEnvArgs {
   hasBetterAuthSecret: boolean;
   // true when CRON_SECRET is already on the project - skip generating a new one.
   hasCronSecret: boolean;
+  // null when glen was skipped or is already configured on the project.
+  glen: Awaited<ReturnType<typeof askGlenSetup>>;
 }
 
 interface EnvVarSpec {
@@ -48,6 +51,23 @@ export async function setEnvVars(args: SetEnvArgs): Promise<void> {
       target: ["production", "preview", "development"],
       type: "encrypted",
     });
+  }
+
+  if (args.glen !== null) {
+    vars.push(
+      {
+        key: "GLEN_API_KEY",
+        value: args.glen.apiKey,
+        target: ["production", "preview", "development"],
+        type: "encrypted",
+      },
+      {
+        key: "GLEN_ORG_ID",
+        value: args.glen.orgId,
+        target: ["production", "preview", "development"],
+        type: "plain",
+      },
+    );
   }
 
   if (vars.length === 0) return;

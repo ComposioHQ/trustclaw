@@ -527,6 +527,7 @@ src/server/clients/
 ├── composio.ts   # Composio SDK (@composio/core) - uses global COMPOSIO_API_KEY from env
 ├── telegram.ts   # Telegram Bot API helper
 ├── redis.ts      # Redis client (resumable streams, streaming state, abort flags)
+├── glen.ts       # Glen team memory for the AI SDK: glen_search tool, system-prompt block, turn recording
 └── db.ts         # Prisma client
 ```
 
