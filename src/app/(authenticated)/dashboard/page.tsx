@@ -18,6 +18,7 @@ export default async function Page() {
           <OnboardingClient
             hasExistingInstance={status.hasInstance}
             hasOnboardingState={status.hasOnboardingState}
+            glenEnabled={status.glenEnabled}
           />
         </ErrorBoundary>
       </HydrateClient>

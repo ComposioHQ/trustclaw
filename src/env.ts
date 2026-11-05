@@ -28,6 +28,9 @@ export const env = createEnv({
     // Redis (optional - resumable streams disabled when missing; basic streaming still works)
     REDIS_URL: z.string().optional(),
 
+    // Glen team memory (optional - glen features disabled when the key or org is missing)
+    GLEN_ENABLED: booleanString.default("false"),
+
     // Agent entrypoint rate limits
     RATE_LIMIT_CHAT_PER_MINUTE: z.coerce.number().int().positive().default(20),
     RATE_LIMIT_CHAT_PER_DAY: z.coerce.number().int().positive().default(500),
@@ -58,6 +61,7 @@ export const env = createEnv({
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
+    GLEN_ENABLED: process.env.GLEN_ENABLED,
     RATE_LIMIT_CHAT_PER_MINUTE: process.env.RATE_LIMIT_CHAT_PER_MINUTE,
     RATE_LIMIT_CHAT_PER_DAY: process.env.RATE_LIMIT_CHAT_PER_DAY,
     RATE_LIMIT_CRON_PER_DAY: process.env.RATE_LIMIT_CRON_PER_DAY,

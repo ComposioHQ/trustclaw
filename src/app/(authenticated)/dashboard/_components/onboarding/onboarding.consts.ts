@@ -4,6 +4,7 @@ export const STEP_ORDER = [
   "personality",
   "emoji",
   "lore",
+  "glen",
   "model",
   "integrations",
   "telegram",

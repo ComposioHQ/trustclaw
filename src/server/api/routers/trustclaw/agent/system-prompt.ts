@@ -7,6 +7,7 @@ interface SystemPromptParams {
   relevantMemories?: string[];
   hasCompactionSummary?: boolean;
   userTimezone: string;
+  glenSystemPrompt?: string;
 }
 
 const DEFAULT_SOUL_PROMPT = `## Who You Are
@@ -186,6 +187,11 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
 
   sections.push(COMPOSIO_TOOLS_DESCRIPTION);
   sections.push(CUSTOM_TOOLS_DESCRIPTION);
+
+  if (params.glenSystemPrompt) {
+    sections.push(params.glenSystemPrompt);
+  }
+
   sections.push(SCHEDULED_TASK_NOTE);
   sections.push(MESSAGING_GUIDELINES);
 

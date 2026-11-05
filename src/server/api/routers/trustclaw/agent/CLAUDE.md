@@ -125,6 +125,11 @@ When real LLM usage is available (from `result.usage` after `streamText()`), tho
 - **memory_search**: Cosine-similarity search over memories
 - **schedule**: Create/list/delete cron jobs (see `../../../app/api/cron/trustclaw/CLAUDE.md`)
 
+### Glen tools (only when `GLEN_ENABLED=true` and the user connected glen during onboarding)
+From `createGlenClient` in `~/server/clients/glen.ts`, which returns `null` when glen is off and also supplies a `<glen-team-memory>` system-prompt block:
+- **glen_search**: Search the team's shared glen memory
+- Every finished turn is sent to glen's `turn` endpoint from `onFinish` (fire-and-forget; failures are logged and never break the chat)
+
 ### Composio tools (dynamic)
 Created per-session via `createComposioClient(apiKey).create(orgId).tools()`. These provide integrations with external services (Gmail, Slack, GitHub, etc.) based on the user's connected accounts.
 

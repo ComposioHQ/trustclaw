@@ -1,6 +1,6 @@
 import { text, confirm, isCancel, cancel, log } from "@clack/prompts";
 
-function ensure<T>(value: T | symbol): T {
+export function ensure<T>(value: T | symbol): T {
   if (isCancel(value)) {
     cancel("Cancelled.");
     process.exit(0);
