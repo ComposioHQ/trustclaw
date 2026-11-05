@@ -8,7 +8,7 @@ A 24/7 personal AI assistant with 1000+ tools via **OAuth** and **sandboxed exec
 
 [Demo Video](https://x.com/sarahfim/status/2022518658048888916)
 [Open Source Launch Video](https://x.com/sarahfim/status/2053989393036145121)
-
+[![Star History Chart](https://api.star-history.com/svg?repos=ComposioHQ/trustclaw&type=Date)](https://star-history.com/#bytebase/star-history&Date)
 
 ---
 
@@ -17,7 +17,7 @@ A 24/7 personal AI assistant with 1000+ tools via **OAuth** and **sandboxed exec
 
 Click here to use the Vercel Template:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET,GLEN_ENABLED&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper.%20Set%20GLEN_ENABLED%20to%20true%20to%20have%20each%20user%20connect%20glen%20team%20memory%20during%20onboarding%2C%20or%20false%20to%20leave%20it%20off.&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
 
 
 ### Or use the CLI
@@ -54,6 +54,7 @@ LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or Open
 - 3-layer context management (pruning, memory flush, summarization compaction) so conversations can run indefinitely
 - 1000+ Composio tool integrations (Gmail, GitHub, Slack, Notion, Linear, Calendar, Drive, Stripe, HubSpot, …) gated by the user's connected accounts
 - Cron-scheduled agent runs for recurring tasks
+- Optional [glen](https://tryglen.com) team memory: set `GLEN_ENABLED=true` and each user connects their own glen account during onboarding. Their turns are recorded to their team's glen memory, and the agent gets a `glen_search` tool to search what the team already worked out
 - Username/password login via Better Auth
 
 ---
@@ -137,11 +138,20 @@ TrustClaw runs fine on the free Hobby plan, but Vercel applies two limits that a
 
 To get **per-minute cron precision** and **up to 800s (~13 min) per function**, upgrade to [Vercel Pro](https://vercel.com/pricing) and re-run the CLI (or manually flip `vercel.json` back to `* * * * *` + bump `maxDuration`).
 
-### No rate-limiting or billing out of the box
+### Usage caps and billing
 
-TrustClaw ships **without** rate limiting, per-user usage caps, or billing logic. If you put a TrustClaw instance on the public internet for strangers to sign up to, **any user can drain your Composio + AI Gateway credits indefinitely**. Before opening signups to anyone but yourself / a trusted handful of people, add at least:
+TrustClaw ships with Redis-backed per-user rate limiting on the chat, cron, and Telegram agent entrypoints. It is enabled by default and controlled with:
 
-- A rate limiter on the chat + cron endpoints (e.g. [Upstash Rate Limit](https://upstash.com/docs/oss/sdks/ts/ratelimit/overview), [Vercel WAF Rate Limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting))
+- `RATE_LIMIT_CHAT_PER_MINUTE` / `RATE_LIMIT_CHAT_PER_DAY`
+- `RATE_LIMIT_CRON_PER_DAY`
+- `RATE_LIMIT_TELEGRAM_PER_MINUTE`
+- `RATE_LIMIT_FAIL_MODE` (`open` in development, `closed` otherwise)
+- `RATE_LIMIT_ENABLED=false` to bypass all agent entrypoint limits
+
+In production, configure `REDIS_URL` or explicitly set `RATE_LIMIT_FAIL_MODE=open` / `RATE_LIMIT_ENABLED=false`.
+
+If you put a TrustClaw instance on the public internet for strangers to sign up to, add at least:
+
 - A monthly per-user message / tool-call cap enforced server-side
 - Billing or invite-only signup if you want to recoup costs
 
@@ -177,6 +187,7 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 | `NEBIUS_ROUTING` _(optional)_ | `direct` or `gateway` — enables Nebius models. See [Model providers](#-model-providers) |
 | `NEBIUS_API_KEY` _(optional)_ | Required when `NEBIUS_ROUTING=direct` |
 | `NEBIUS_BASE_URL` _(optional)_ | Override the default EU endpoint (e.g. for us-central1) |
+| `GLEN_ENABLED` _(optional)_ | `true` to have each user connect [glen](https://tryglen.com) team memory during onboarding. Defaults to `false` |
 
 See [`.env.example`](./.env.example) for the full template.
 

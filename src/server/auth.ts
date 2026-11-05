@@ -50,6 +50,22 @@ export const auth = betterAuth({
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
   ],
   database: prismaAdapter(db, { provider: "postgresql" }),
+  user: {
+    additionalFields: {
+      glenApiKeyEncrypted: {
+        type: "string",
+        required: false,
+        input: false,
+        returned: false,
+      },
+      glenOrgId: {
+        type: "string",
+        required: false,
+        input: false,
+        returned: false,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,

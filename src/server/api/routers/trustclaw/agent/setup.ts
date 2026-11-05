@@ -29,6 +29,7 @@ import {
 } from "./context/token-estimation";
 import { stripToolResultEchoes } from "./strip-tool-echoes";
 import { clearStreamingMessage } from "~/server/clients/redis";
+import { createGlenClient } from "~/server/clients/glen";
 import type { ReconstructedMessage } from "./types";
 
 type MessageSource = "web" | "telegram" | "cron";
@@ -90,12 +91,17 @@ export async function prepareAgentRun(
 
   const user = await db.user.findUnique({
     where: { id: instance.userId },
-    select: { timezone: true },
+    select: { timezone: true, glenApiKeyEncrypted: true, glenOrgId: true },
   });
 
   const userTimezone = user?.timezone ?? "UTC";
 
   const relevantMemories = await searchMemoriesForContext(instanceId, userMessage);
+
+  const glen = await createGlenClient(user, {
+    conversationId: instanceId,
+    timezone: userTimezone,
+  });
 
   const systemPrompt = sanitizeString(
     buildSystemPrompt({
@@ -105,6 +111,7 @@ export async function prepareAgentRun(
       relevantMemories,
       hasCompactionSummary: !!instance.lastCompactionSummary,
       userTimezone,
+      glenSystemPrompt: glen?.systemPrompt,
     }),
   );
 
@@ -162,6 +169,7 @@ export async function prepareAgentRun(
   const allTools: ToolSet = sanitizeToolResults({
     ...composioTools,
     ...customTools,
+    ...glen?.tools,
   });
 
   // Pre-create assistant message row so we can update it in onFinish
@@ -246,6 +254,17 @@ export async function prepareAgentRun(
             cacheReadTokens,
             cacheWriteTokens,
           },
+        });
+
+        void glen?.recordTurn({
+          idempotencyKey: assistantMessageRow.id,
+          userMessage,
+          assistantMessage: steps
+            .map((step) => stripToolResultEchoes(step.text))
+            .filter(Boolean)
+            .join("\n\n"),
+          model: instance.anthropicModel,
+          source,
         });
 
         // Fire-and-forget post-response tasks

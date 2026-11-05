@@ -8,11 +8,13 @@ import { OnboardingSkeleton } from "./onboarding.skeleton";
 interface OnboardingClientProps {
   hasExistingInstance: boolean;
   hasOnboardingState: boolean;
+  glenEnabled: boolean;
 }
 
 export function OnboardingClient({
   hasExistingInstance,
   hasOnboardingState,
+  glenEnabled,
 }: OnboardingClientProps) {
   const router = useRouter();
 
@@ -28,6 +30,7 @@ export function OnboardingClient({
   return (
     <Onboarding
       hasExistingInstance={hasExistingInstance}
+      glenEnabled={glenEnabled}
       savedState={data?.onboardingState ?? null}
       onComplete={() => router.refresh()}
     />

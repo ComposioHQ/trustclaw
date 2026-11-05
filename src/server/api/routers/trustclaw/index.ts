@@ -14,6 +14,7 @@ import { getStreamingMessage } from "./getStreamingMessage";
 import { getMemories } from "./getMemories";
 import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
+import { saveGlenConnection } from "./saveGlenConnection";
 import { checkConnectionStatus } from "./checkConnectionStatus";
 import { getAvailableModels } from "./getAvailableModels";
 
@@ -33,6 +34,7 @@ export const trustclawRouter = router({
   getMemories,
   getIntegrationAuthLinks,
   saveOnboardingState,
+  saveGlenConnection,
   checkConnectionStatus,
   getAvailableModels,
 });

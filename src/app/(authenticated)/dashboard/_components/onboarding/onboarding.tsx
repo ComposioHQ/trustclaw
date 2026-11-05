@@ -25,6 +25,7 @@ import { WritingStyleStep } from "./writing-style-step";
 import { PersonalityStep } from "./personality-step";
 import { EmojiStep } from "./emoji-step";
 import { LoreStep } from "./lore-step";
+import { GlenStep } from "./glen-step";
 import { ModelStep } from "./model-step";
 import { IntegrationsStep } from "./integrations-step";
 import { TelegramStep } from "./telegram-step";
@@ -59,6 +60,8 @@ function getAnimationState(step: Step): AnimationState {
       return "celebrating";
     case "lore":
       return "listening";
+    case "glen":
+      return "thinking";
     case "model":
       return "thinking";
     case "integrations":
@@ -81,20 +84,23 @@ interface SavedOnboardingState {
 interface OnboardingProps {
   onComplete: () => void;
   hasExistingInstance?: boolean;
+  glenEnabled: boolean;
   savedState?: SavedOnboardingState | null;
 }
 
-function isValidStep(s: string): s is Step {
-  return (STEP_ORDER satisfies readonly Step[]).some((step) => step === s);
+function isValidStep(s: string, steps: readonly Step[]): s is Step {
+  return steps.some((step) => step === s);
 }
 
 export function Onboarding({
   onComplete,
   hasExistingInstance = false,
+  glenEnabled,
   savedState,
 }: OnboardingProps) {
+  const steps = STEP_ORDER.filter((s) => s !== "glen" || glenEnabled);
   const initialStep: Step =
-    savedState?.currentStep && isValidStep(savedState.currentStep)
+    savedState?.currentStep && isValidStep(savedState.currentStep, steps)
       ? savedState.currentStep
       : "name";
 
@@ -120,12 +126,13 @@ export function Onboarding({
   });
 
   const savedStepIndex =
-    savedState?.currentStep && isValidStep(savedState.currentStep)
-      ? STEP_ORDER.indexOf(savedState.currentStep)
+    savedState?.currentStep && isValidStep(savedState.currentStep, steps)
+      ? steps.indexOf(savedState.currentStep)
       : -1;
   const [instanceCreated, setInstanceCreated] = useState(
-    hasExistingInstance || savedStepIndex > STEP_ORDER.indexOf("model"),
+    hasExistingInstance || savedStepIndex > steps.indexOf("model"),
   );
+  const [glenConnected, setGlenConnected] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -161,9 +168,9 @@ export function Onboarding({
   };
 
   const goBack = () => {
-    const currentIndex = STEP_ORDER.indexOf(step);
+    const currentIndex = steps.indexOf(step);
     if (currentIndex > 0) {
-      const prevStep = STEP_ORDER[currentIndex - 1]!;
+      const prevStep = steps[currentIndex - 1]!;
       setStep(prevStep);
       void persistState(prevStep, wizardState);
     }
@@ -247,7 +254,7 @@ export function Onboarding({
           />
         </div>
 
-        <ProgressDots current={STEP_ORDER.indexOf(step) + 1} />
+        <ProgressDots current={steps.indexOf(step) + 1} total={steps.length} />
 
         <AnimatePresence mode="wait">
           {step === "name" && (
@@ -300,9 +307,19 @@ export function Onboarding({
               key="lore"
               value={wizardState.lore}
               onChange={(lore) => setWizardState((prev) => ({ ...prev, lore }))}
+              onNext={() => goToStep(glenEnabled ? "glen" : "model")}
+              onBack={goBack}
+              onSkip={() => goToStep(glenEnabled ? "glen" : "model")}
+            />
+          )}
+
+          {step === "glen" && (
+            <GlenStep
+              key="glen"
+              connected={glenConnected}
+              onConnected={() => setGlenConnected(true)}
               onNext={() => goToStep("model")}
               onBack={goBack}
-              onSkip={() => goToStep("model")}
             />
           )}
 

@@ -1,6 +1,10 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+const booleanString = z
+  .enum(["true", "false"])
+  .transform((value) => value === "true");
+
 export const env = createEnv({
   server: {
     NODE_ENV: z
@@ -44,6 +48,21 @@ export const env = createEnv({
     // Redis (optional - resumable streams disabled when missing; basic streaming still works)
     REDIS_URL: z.string().optional(),
 
+    // Glen team memory (optional - glen features disabled when the key or org is missing)
+    GLEN_ENABLED: booleanString.default("false"),
+
+    // Agent entrypoint rate limits
+    RATE_LIMIT_CHAT_PER_MINUTE: z.coerce.number().int().positive().default(20),
+    RATE_LIMIT_CHAT_PER_DAY: z.coerce.number().int().positive().default(500),
+    RATE_LIMIT_CRON_PER_DAY: z.coerce.number().int().positive().default(100),
+    RATE_LIMIT_TELEGRAM_PER_MINUTE: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(20),
+    RATE_LIMIT_FAIL_MODE: z.enum(["open", "closed"]),
+    RATE_LIMIT_ENABLED: booleanString.default("true"),
+
     // Cron auth. Required in production so unauthenticated callers can't hit
     // /api/cron/* endpoints. Vercel auto-injects this when crons are configured
     // in vercel.json; the trustclaw deploy CLI also generates one on first deploy.
@@ -65,6 +84,18 @@ export const env = createEnv({
     TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
+    GLEN_ENABLED: process.env.GLEN_ENABLED,
+    RATE_LIMIT_CHAT_PER_MINUTE: process.env.RATE_LIMIT_CHAT_PER_MINUTE,
+    RATE_LIMIT_CHAT_PER_DAY: process.env.RATE_LIMIT_CHAT_PER_DAY,
+    RATE_LIMIT_CRON_PER_DAY: process.env.RATE_LIMIT_CRON_PER_DAY,
+    RATE_LIMIT_TELEGRAM_PER_MINUTE:
+      process.env.RATE_LIMIT_TELEGRAM_PER_MINUTE,
+    RATE_LIMIT_FAIL_MODE:
+      process.env.RATE_LIMIT_FAIL_MODE ??
+      ((process.env.NODE_ENV ?? "development") === "development"
+        ? "open"
+        : "closed"),
+    RATE_LIMIT_ENABLED: process.env.RATE_LIMIT_ENABLED,
     CRON_SECRET: process.env.CRON_SECRET,
 
     // Client URL resolution:
@@ -83,6 +114,11 @@ export const env = createEnv({
               ? `https://${process.env.VERCEL_URL}`
               : undefined),
   },
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  // SKIP_ENV_VALIDATION is for local lint/typecheck without a full .env.
+  // Never honour it in production — security-critical secrets like
+  // CRON_SECRET and BETTER_AUTH_SECRET must always be present at runtime.
+  skipValidation:
+    !!process.env.SKIP_ENV_VALIDATION &&
+    process.env.NODE_ENV !== "production",
   emptyStringAsUndefined: true,
 });

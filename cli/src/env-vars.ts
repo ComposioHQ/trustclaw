@@ -11,6 +11,8 @@ interface SetEnvArgs {
   hasBetterAuthSecret: boolean;
   // true when CRON_SECRET is already on the project - skip generating a new one.
   hasCronSecret: boolean;
+  // null when GLEN_ENABLED is already set on the project.
+  glenEnabled: boolean | null;
 }
 
 interface EnvVarSpec {
@@ -47,6 +49,15 @@ export async function setEnvVars(args: SetEnvArgs): Promise<void> {
       value: args.composioApiKey,
       target: ["production", "preview", "development"],
       type: "encrypted",
+    });
+  }
+
+  if (args.glenEnabled !== null) {
+    vars.push({
+      key: "GLEN_ENABLED",
+      value: String(args.glenEnabled),
+      target: ["production", "preview", "development"],
+      type: "plain",
     });
   }
 

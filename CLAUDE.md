@@ -540,6 +540,7 @@ src/server/clients/
 ├── nebius.ts     # Nebius Token Factory client (@ai-sdk/openai-compatible) - direct mode only
 ├── telegram.ts   # Telegram Bot API helper
 ├── redis.ts      # Redis client (resumable streams, streaming state, abort flags)
+├── glen.ts       # Glen team memory for the AI SDK: glen_search tool, system-prompt block, turn recording
 └── db.ts         # Prisma client
 ```
 

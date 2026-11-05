@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { after, NextResponse } from "next/server";
 import { Prisma } from "~/generated/prisma/client";
 import { z } from "zod";
@@ -6,6 +7,7 @@ import { db } from "~/server/clients/db";
 import { prepareAgentRun } from "~/server/api/routers/trustclaw/agent/setup";
 import { computeNextRunSafe } from "~/server/api/routers/trustclaw/agent/tools/cron-utils";
 import { stripToolResultEchoes } from "~/server/api/routers/trustclaw/agent/strip-tool-echoes";
+import { rateLimit } from "~/server/clients/rate-limit";
 import { sendTelegramMessage } from "~/server/clients/telegram";
 import { executeJobInput, cronJobRow, type CronJobRow } from "./route.schema";
 
@@ -15,6 +17,7 @@ async function loadJobsFromDb(jobIds: string[]) {
       SELECT
         cj.id,
         cj."instanceId",
+        ci."userId",
         cj.expression,
         cj.prompt,
         cj.timezone,
@@ -62,12 +65,36 @@ async function executeJobs(
   nowOverride?: string,
 ) {
   const now = nowOverride ? new Date(nowOverride) : new Date();
-  const instanceId = jobs[0]!.instanceId;
-  const telegramChatId = jobs[0]!.telegramChatId;
 
   try {
+    const allowedJobs: CronJobRow[] = [];
+    const limitedJobs: CronJobRow[] = [];
+
+    for (const job of jobs) {
+      const limit = await rateLimit(job.userId, "cron");
+      if (limit.allowed) {
+        allowedJobs.push(job);
+      } else {
+        limitedJobs.push(job);
+        console.warn(
+          `[cron/execute] rate limit exceeded for user ${job.userId}; job_id=${job.id}; retry_after=${limit.retryAfterSeconds}s`,
+        );
+      }
+    }
+
+    if (limitedJobs.length > 0) {
+      await releaseJobLocks(limitedJobs, invocationId, now);
+    }
+
+    if (allowedJobs.length === 0) {
+      return;
+    }
+
+    const instanceId = allowedJobs[0]!.instanceId;
+    const telegramChatId = allowedJobs[0]!.telegramChatId;
+
     // Combine all prompts into a single user message
-    const combinedMessage = jobs
+    const combinedMessage = allowedJobs
       .map((j) => `<scheduled-task>\n${j.prompt}\n</scheduled-task>`)
       .join("\n\n");
 
@@ -83,7 +110,7 @@ async function executeJobs(
     const result = await agent.generate({ prompt: messages });
 
     // Release all job locks in a single query (each gets its own nextRunAt)
-    await releaseJobLocks(jobs, invocationId, now);
+    await releaseJobLocks(allowedJobs, invocationId, now);
 
     // Forward to Telegram if linked
     if (telegramChatId) {
@@ -123,8 +150,22 @@ export async function POST(request: Request) {
   // routes; the dispatcher /api/cron/trustclaw forwards it on internal fetch).
   // Dev mode allows unauthenticated calls so the local trigger script works.
   if (env.NODE_ENV !== "development") {
+    // Fail closed before the bearer comparison: if CRON_SECRET is missing
+    // (e.g. env validation was bypassed and the var was never set), the
+    // expected header would interpolate to `Bearer undefined` and accept
+    // anyone sending that literal string. Reject the request outright.
+    if (typeof env.CRON_SECRET !== "string" || env.CRON_SECRET.length === 0) {
+      return new Response("Server misconfigured: CRON_SECRET missing", {
+        status: 503,
+      });
+    }
     const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${env.CRON_SECRET}`) {
+    const expected = Buffer.from(`Bearer ${env.CRON_SECRET}`);
+    const actual = Buffer.from(auth);
+    if (
+      actual.length !== expected.length ||
+      !timingSafeEqual(actual, expected)
+    ) {
       return new Response("Unauthorized", { status: 401 });
     }
   }
