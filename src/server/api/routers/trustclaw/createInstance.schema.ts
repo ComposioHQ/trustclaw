@@ -1,17 +1,16 @@
 import { z } from "zod";
+import { ALL_MODEL_IDS, DEFAULT_MODEL_ID } from "./models";
 
-export const ALLOWED_ANTHROPIC_MODELS = [
-  "claude-sonnet-4-5-20250929",
-  "claude-opus-4-6",
-  "claude-haiku-4-5-20251001",
-] as const;
+/**
+ * @deprecated Use `ALL_MODEL_IDS` from `./models` for the full provider-agnostic list.
+ * Retained for callers/imports that still reference Anthropic-only.
+ */
+export const ALLOWED_ANTHROPIC_MODELS = ALL_MODEL_IDS;
 
-export const allowedAnthropicModelSchema = z.enum(ALLOWED_ANTHROPIC_MODELS);
+export const allowedAnthropicModelSchema = z.enum(ALL_MODEL_IDS);
 
 export const createInstanceInput = z.object({
-  anthropicModel: allowedAnthropicModelSchema.default(
-    "claude-sonnet-4-5-20250929",
-  ),
+  anthropicModel: allowedAnthropicModelSchema.default(DEFAULT_MODEL_ID),
 });
 
 export type CreateInstanceInput = z.infer<typeof createInstanceInput>;
