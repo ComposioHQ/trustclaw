@@ -137,7 +137,18 @@ In production, configure `REDIS_URL` or explicitly set `RATE_LIMIT_FAIL_MODE=ope
 If you put a TrustClaw instance on the public internet for strangers to sign up to, add at least:
 
 - A monthly per-user message / tool-call cap enforced server-side
-- Billing or invite-only signup if you want to recoup costs
+- Billing if you want to recoup costs
+
+TrustClaw includes an opt-in invite-only signup gate for smaller trusted deployments:
+
+```bash
+ALLOW_OPEN_SIGNUP=false
+ADMIN_USER_ID=<your user id>
+```
+
+With open signup disabled, new accounts must provide an unused invite code. The admin user can create and revoke codes at `/dashboard/admin/invites`.
+
+Create your own account before turning off open signup, then set `ADMIN_USER_ID` to its id (for example `SELECT id FROM "user" WHERE username = 'you';`). The admin is matched by account id rather than email because emails are not verified.
 
 ---
 
