@@ -86,14 +86,14 @@ export async function prepareAgentRun(
 
   const user = await db.user.findUnique({
     where: { id: instance.userId },
-    select: { timezone: true },
+    select: { timezone: true, glenApiKeyEncrypted: true, glenOrgId: true },
   });
 
   const userTimezone = user?.timezone ?? "UTC";
 
   const relevantMemories = await searchMemoriesForContext(instanceId, userMessage);
 
-  const glen = createGlenClient({
+  const glen = await createGlenClient(user, {
     conversationId: instanceId,
     timezone: userTimezone,
   });

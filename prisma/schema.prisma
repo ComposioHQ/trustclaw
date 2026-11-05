@@ -28,20 +28,22 @@ enum MessageType {
 }
 
 model User {
-  id              String                 @id
-  name            String
-  email           String
-  emailVerified   Boolean                @default(false)
-  image           String?
-  timezone        String                 @default("UTC")
-  username        String?                @unique
-  displayUsername String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  sessions        Session[]
-  accounts        Account[]
-  instances       ComposioClawInstance[]
-  onboardingState OnboardingState?
+  id                  String                 @id
+  name                String
+  email               String
+  emailVerified       Boolean                @default(false)
+  image               String?
+  timezone            String                 @default("UTC")
+  username            String?                @unique
+  displayUsername     String?
+  glenApiKeyEncrypted String?                @db.Text
+  glenOrgId           String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  instances           ComposioClawInstance[]
+  onboardingState     OnboardingState?
 
   @@unique([email])
   @@map("user")

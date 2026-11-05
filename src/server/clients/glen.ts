@@ -1,8 +1,8 @@
 import { tool } from "ai";
+import { symmetricDecrypt } from "better-auth/crypto";
 import { z } from "zod";
 import { env } from "~/env";
-
-const GLEN_URL = "https://app.tryglen.com";
+import { GLEN_URL } from "./glen.consts";
 
 // glen's turn endpoint rejects longer messages.
 const MAX_MESSAGE_CHARS = 100_000;
@@ -37,12 +37,24 @@ const searchResponse = z.object({
   }),
 });
 
-export function createGlenClient(context: {
-  conversationId: string;
-  timezone: string;
-}) {
-  const { GLEN_API_KEY: apiKey, GLEN_ORG_ID: orgId } = env;
-  if (!apiKey || !orgId) return null;
+export async function createGlenClient(
+  user: { glenApiKeyEncrypted: string | null; glenOrgId: string | null } | null,
+  context: { conversationId: string; timezone: string },
+) {
+  if (!env.GLEN_ENABLED || !user?.glenApiKeyEncrypted || !user.glenOrgId) {
+    return null;
+  }
+
+  const orgId = user.glenOrgId;
+  // Fails if BETTER_AUTH_SECRET changed since the key was saved. Chat keeps working without glen.
+  const apiKey = await symmetricDecrypt({
+    key: env.BETTER_AUTH_SECRET,
+    data: user.glenApiKeyEncrypted,
+  }).catch((error) => {
+    console.error("[glen] couldn't decrypt API key:", error);
+    return null;
+  });
+  if (!apiKey) return null;
 
   const callGlen = async (procedure: "search" | "turn", input: object) => {
     const response = await fetch(`${GLEN_URL}/api/mcp/trpc/${procedure}`, {

@@ -1,9 +1,12 @@
 import { cn } from "~/lib/utils";
-import { STEP_ORDER } from "./onboarding.consts";
 
-export function ProgressDots({ current }: { current: number }) {
-  const total = STEP_ORDER.length;
-
+export function ProgressDots({
+  current,
+  total,
+}: {
+  current: number;
+  total: number;
+}) {
   return (
     <div className="flex flex-col items-center gap-1.5 py-2">
       <p className="text-muted-foreground text-xs">

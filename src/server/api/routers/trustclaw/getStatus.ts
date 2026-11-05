@@ -1,3 +1,4 @@
+import { env } from "~/env";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/clients/db";
 import { isTelegramConfigured } from "~/server/clients/telegram";
@@ -20,5 +21,6 @@ export const getStatus = protectedProcedure.query(async ({ ctx }) => {
     hasInstance: !!instance,
     hasOnboardingState,
     telegramConfigured: isTelegramConfigured(),
+    glenEnabled: env.GLEN_ENABLED,
   };
 });

@@ -18,7 +18,7 @@ import { setEnvVars } from "./env-vars.js";
 import { runMigration } from "./migrate.js";
 import { triggerProductionDeploy } from "./trigger-deploy.js";
 import { maybeSetupTelegram } from "./telegram-setup.js";
-import { askGlenSetup } from "./glen-setup.js";
+import { askGlenEnabled } from "./glen-setup.js";
 import {
   fetchProjectEnvValue,
   getProductionAlias,
@@ -79,7 +79,7 @@ export async function deploy(): Promise<void> {
     }
 
     const remaining = await gatherRemainingInputs({ existingEnvKeys });
-    const glen = await askGlenSetup({ existingEnvKeys });
+    const glenEnabled = await askGlenEnabled({ existingEnvKeys });
 
     let repo: string;
     // Path to a directory with a working prisma/schema.prisma. In local mode
@@ -152,7 +152,7 @@ export async function deploy(): Promise<void> {
       composioApiKey,
       hasBetterAuthSecret: existingEnvKeys.has("BETTER_AUTH_SECRET"),
       hasCronSecret: existingEnvKeys.has("CRON_SECRET"),
-      glen,
+      glenEnabled,
     });
 
     await runMigration({

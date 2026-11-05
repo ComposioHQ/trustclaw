@@ -17,11 +17,7 @@ A 24/7 personal AI assistant with 1000+ tools via **OAuth** and **sandboxed exec
 
 Click here to use the Vercel Template:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
-
-With [glen](https://tryglen.com) team memory (asks for a glen API key and organization ID too):
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET,GLEN_API_KEY,GLEN_ORG_ID&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper.%20Create%20GLEN_API_KEY%20at%20https%3A%2F%2Fapp.tryglen.com%2Fsettings%2Fapi-keys%20and%20paste%20your%20glen%20organization%20ID%20as%20GLEN_ORG_ID.&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw&project-name=trustclaw&repository-name=trustclaw&env=BETTER_AUTH_SECRET,COMPOSIO_API_KEY,CRON_SECRET,GLEN_ENABLED&envDescription=Generate%20BETTER_AUTH_SECRET%20and%20CRON_SECRET%20with%3A%20openssl%20rand%20-base64%2032.%20Get%20a%20free%20COMPOSIO_API_KEY%20at%20https%3A%2F%2Fdashboard.composio.dev%2Flogin%3Fflow%3Ddeveloper.%20Set%20GLEN_ENABLED%20to%20true%20to%20have%20each%20user%20connect%20glen%20team%20memory%20during%20onboarding%2C%20or%20false%20to%20leave%20it%20off.&envLink=https%3A%2F%2Fgithub.com%2FComposioHQ%2Ftrustclaw%23environment-variables&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%5D&skippable-integrations=1)
 
 
 ### Or use the CLI
@@ -58,7 +54,7 @@ LLM and embedding calls route through Vercel AI Gateway - **no Anthropic or Open
 - 3-layer context management (pruning, memory flush, summarization compaction) so conversations can run indefinitely
 - 1000+ Composio tool integrations (Gmail, GitHub, Slack, Notion, Linear, Calendar, Drive, Stripe, HubSpot, …) gated by the user's connected accounts
 - Cron-scheduled agent runs for recurring tasks
-- Optional [glen](https://tryglen.com) team memory: every turn is recorded to your team's glen memory, and the agent gets a `glen_search` tool to search what the team already worked out
+- Optional [glen](https://tryglen.com) team memory: set `GLEN_ENABLED=true` and each user connects their own glen account during onboarding. Their turns are recorded to their team's glen memory, and the agent gets a `glen_search` tool to search what the team already worked out
 - Username/password login via Better Auth
 
 ---
@@ -172,8 +168,7 @@ For Telegram, point your bot's webhook at `<NEXT_PUBLIC_APP_URL>/api/telegram-we
 | `TELEGRAM_BOT_TOKEN` _(optional)_ | Telegram bot |
 | `TELEGRAM_BOT_USERNAME` _(optional)_ | Telegram bot |
 | `TELEGRAM_WEBHOOK_SECRET` _(optional)_ | Telegram webhook auth |
-| `GLEN_API_KEY` _(optional)_ | Glen team memory API key ([create one](https://app.tryglen.com/settings/api-keys)) |
-| `GLEN_ORG_ID` _(optional)_ | Glen organization to record to and search |
+| `GLEN_ENABLED` _(optional)_ | `true` to have each user connect [glen](https://tryglen.com) team memory during onboarding. Defaults to `false` |
 
 See [`.env.example`](./.env.example) for the full template.
 
