@@ -16,8 +16,10 @@ import { getIntegrationAuthLinks } from "./getIntegrationAuthLinks";
 import { saveOnboardingState } from "./saveOnboardingState";
 import { saveGlenConnection } from "./saveGlenConnection";
 import { checkConnectionStatus } from "./checkConnectionStatus";
+import { adminRouter } from "./admin";
 
 export const trustclawRouter = router({
+  admin: adminRouter,
   getInstance,
   getStatus,
   createInstance,

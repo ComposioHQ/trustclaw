@@ -4,6 +4,7 @@ import { LoginPage } from "./_components/login-page";
 import { auth } from "~/server/auth";
 import { db } from "~/server/clients/db";
 import { ErrorDisplay } from "~/components/core/error-display";
+import { env } from "~/env";
 
 export default async function Page() {
   let session;
@@ -31,5 +32,10 @@ export default async function Page() {
     // Non-fatal: if we can't count users, default to login tab.
   }
 
-  return <LoginPage firstTime={firstTime} />;
+  return (
+    <LoginPage
+      firstTime={firstTime}
+      inviteOnlySignup={!env.ALLOW_OPEN_SIGNUP}
+    />
+  );
 }

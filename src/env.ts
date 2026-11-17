@@ -13,6 +13,8 @@ export const env = createEnv({
 
     // Better Auth
     BETTER_AUTH_SECRET: z.string(),
+    ALLOW_OPEN_SIGNUP: booleanString.default("true"),
+    ADMIN_USER_ID: z.string().min(1).optional(),
 
     // Composio API (global key)
     COMPOSIO_API_KEY: z.string(),
@@ -55,6 +57,8 @@ export const env = createEnv({
     // Server
     NODE_ENV: process.env.NODE_ENV,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    ALLOW_OPEN_SIGNUP: process.env.ALLOW_OPEN_SIGNUP,
+    ADMIN_USER_ID: process.env.ADMIN_USER_ID,
     COMPOSIO_API_KEY: process.env.COMPOSIO_API_KEY,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
