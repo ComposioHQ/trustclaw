@@ -17,6 +17,11 @@ const ONBOARDING_TOOLKITS = [
     name: "Slack",
     logo: "https://logos.composio.dev/api/slack",
   },
+  {
+    slug: "tavily",
+    name: "Tavily",
+    logo: "https://logos.composio.dev/api/tavily",
+  },
 ] as const;
 
 export const getIntegrationAuthLinks = protectedProcedure.query(
